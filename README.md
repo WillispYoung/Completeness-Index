@@ -1,2 +1,2 @@
-# Page_Interactivity_Measurement
+# Page Interactivity Measurement
 Implementation on the measurement of time-to-interactivity for web pages.
