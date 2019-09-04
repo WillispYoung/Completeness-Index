@@ -1,0 +1,1 @@
+var start_page_load = new Date();
