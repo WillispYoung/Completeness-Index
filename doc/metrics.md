@@ -14,4 +14,3 @@
 
     Event sequence (earlier to later): 
     readystatechange[interactive] < DOMContentLoaded < readystatechange[complete] < loadEventEnd 
-

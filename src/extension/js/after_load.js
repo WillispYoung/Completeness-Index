@@ -2,6 +2,7 @@
 // Timeout should be greater than page load time, so that time_metris is properly acquired.
 // Otherwise page_load_time can be acquired using timestamps allocated in before_load and after_load,
 // However connection_time and render_time cannot be acquired easily.
+// Deprecated API.
 setTimeout(function(){
     var time_record = window.performance.timing;
 
@@ -16,6 +17,6 @@ setTimeout(function(){
     // });
 
     console.log(time_metrics);
-}, 2000);
+}, 2000);  // timeout should be conservative
 
-// 
+// 2. Time to First (Meaningful) Paint
