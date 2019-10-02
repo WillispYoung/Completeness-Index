@@ -6,6 +6,6 @@
     "\\src",
     "\\src\\puppeteer"
   ],
-  "SelectedNode": "\\doc\\metrics.md",
+  "SelectedNode": "\\src\\puppeteer\\demo.js",
   "PreviewInSolutionExplorer": false
 }
