@@ -58,7 +58,7 @@ puppeteer.launch().then(async browser => {
     //     } catch (e) {
     //         // console.log(e);
     //     }
-    // }, 100); // This interval is important.
+    // }, 100);
 
     page.on("domcontentloaded", async function() {
         console.log('DOM Content Loaded');
@@ -67,10 +67,10 @@ puppeteer.launch().then(async browser => {
 
     page.on('load', async function() {
         console.log('Page Loaded');
-        // clearInterval(interval);
+        // clearInterval(setIntervalerval);
 
         // await page.screenshot({ path: 'l.png' });
-        // await browser.close();	// Don't close now!
+        await browser.close();
     });
 
     // ---> Combine CDP together.
@@ -84,7 +84,6 @@ puppeteer.launch().then(async browser => {
                 // console.log(response.base64Encoded);
                 if (!response.base64Encoded) {
                     // --> Contains JavaScript files.
-                    // console.log(response.body);
                     var content = response.body;
 
                 }
@@ -96,11 +95,19 @@ puppeteer.launch().then(async browser => {
 
         await client.send('LayerTree.enable');
 
+        // --> Combine layerTree change with layer paint?
+        client.on('LayerTree.layerTreeDidChange', async function(layers) {
+        	var now = new Date().getTime();
+            console.log(now, layers);
+        });
+
         client.on('LayerTree.layerPainted', async function(layerId, clip) {
+        	var now = new Date().getTime();
             try {
-                var reasons = await client.send('LayerTree.compositingReasons', layerId);
-                console.log(clip);
-                console.log(reasons);
+            	if (clip) 
+            		console.log(now, layerId, clip);
+            	else
+            		console.log(now, layerId);
             } catch (e) {
                 console.log("Error capturing layer paint events.");
             }
@@ -112,7 +119,7 @@ puppeteer.launch().then(async browser => {
     }
 
     // --> Always put this line at the end of file!
-    await page.goto('https://www.zhihu.com/topic/19565870/');
+    await page.goto('https://www.douyu.com');
 
     // ---> Hold command line window.
     var input = process.stdin.read();
