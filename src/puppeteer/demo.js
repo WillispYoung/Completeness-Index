@@ -1,64 +1,13 @@
 const puppeteer = require("puppeteer");
+const fs = require("fs");
 
 puppeteer.launch().then(async browser => {
     const page = await browser.newPage();
 
-    // ---> Set viewport size.
-    //var width = 1920, height = 1080;
-    // await page.setViewport({
-    //     width: 600,
-    //     height: 1000
-    // });
-    //console.log(page.viewport().width, page.viewport().height);
-
-    // ---> Record layer change and other events periodically.
-    // var interval = setInterval(async function() {
-    //     const now = new Date().getTime();
-    //     // console.log(now);
-
-    //     // await page.screenshot({ path: 'ss/' + now + ".png" });
-
-    //     try {
-    //         // Remove same DIVs.
-    //         const allDivs = await page.$$('div');
-    //         // console.log("Number of DIVs:", allDivs.length);
-
-    //         const visibleDivs = [];
-    //         // var visibleCount = 0;
-
-    //         for (var i = 0; i < allDivs.length; i++) {
-    //             var bbox = await allDivs[i].boundingBox();
-    //             if (bbox != null) {
-    //                 if (visibleDivs.length == 0) {
-    //                     visibleDivs.push(bbox);
-    //                     continue;
-    //                 }
-
-    //                 for (var j = 0; j < visibleDivs.length; j++) {
-    //                     if (bbox.x == visibleDivs[j].x &&
-    //                         bbox.y == visibleDivs[j].y &&
-    //                         bbox.width == visibleDivs[j].width &&
-    //                         bbox.height == visibleDivs[j].height)
-    //                         continue;
-    //                     else {
-    //                         visibleDivs.push(bbox);
-    //                         break;
-    //                     }
-    //                 }
-    //             }
-    //             // if (bbox !== null) {
-    //             //     visibleCount += 1;
-    //             //     //console.log(bbox);
-    //             //     console.log("X:", bbox.x, "Y:", bbox.y,
-    //             //         "Width:", bbox.width, "Height:", bbox.height);
-    //             // }
-    //         }
-
-    //         // console.log("Visible Count:", visibleDivs.length);
-    //     } catch (e) {
-    //         // console.log(e);
-    //     }
-    // }, 100);
+    await page.setViewport({
+        width: 1000,
+        height: 800
+    });
 
     page.on("domcontentloaded", async function() {
         console.log('DOM Content Loaded');
@@ -67,11 +16,12 @@ puppeteer.launch().then(async browser => {
 
     page.on('load', async function() {
         console.log('Page Loaded');
-        // clearInterval(setIntervalerval);
 
         // await page.screenshot({ path: 'l.png' });
-        await browser.close();
+        // await browser.close();
     });
+
+    page.on('')
 
     // ---> Combine CDP together.
     try {
@@ -97,8 +47,8 @@ puppeteer.launch().then(async browser => {
 
         // --> Combine layerTree change with layer paint?
         client.on('LayerTree.layerTreeDidChange', async function(layers) {
-        	var now = new Date().getTime();
-            console.log(now, layers);
+        	// var now = new Date().getTime();
+         //    console.log(now, layers);
         });
 
         client.on('LayerTree.layerPainted', async function(layerId, clip) {
@@ -108,8 +58,22 @@ puppeteer.launch().then(async browser => {
             		console.log(now, layerId, clip);
             	else
             		console.log(now, layerId);
+
+                var snapshotId = await client.send('LayerTree.makeSnapshot', layerId);
+                var imgUrl = await client.send('LayerTree.replaySnapshot', snapshotId);
+
+                // console.log(typeof(imgUrl));
+                // console.log(imgUrl.dataURL);
+                // fs.writeFile('a.txt', imgUrl.dataURL, () => {});
+                // process.exit();
+
+                var base64Data = imgUrl.dataURL.replace(/^data:image\/\w+;base64,/, "");
+                var buffer = new Buffer(base64Data, 'base64');
+                fs.writeFile("tmp/" + now + ".png", buffer, () => {});
             } catch (e) {
-                console.log("Error capturing layer paint events.");
+                console.log(e);
+                // console.log("Error capturing layer paint events.");
+                process.exit();
             }
         });
 
@@ -119,7 +83,7 @@ puppeteer.launch().then(async browser => {
     }
 
     // --> Always put this line at the end of file!
-    await page.goto('https://www.douyu.com');
+    await page.goto('https://www.qq.com');
 
     // ---> Hold command line window.
     var input = process.stdin.read();
