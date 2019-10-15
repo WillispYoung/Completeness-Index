@@ -20,9 +20,7 @@ puppeteer.launch().then(async browser => {
         // await page.screenshot({ path: 'l.png' });
         // await browser.close();
     });
-
-    page.on('')
-
+    
     // ---> Combine CDP together.
     try {
         const client = await page.target().createCDPSession();
@@ -48,7 +46,7 @@ puppeteer.launch().then(async browser => {
         // --> Combine layerTree change with layer paint?
         client.on('LayerTree.layerTreeDidChange', async function(layers) {
         	// var now = new Date().getTime();
-         //    console.log(now, layers);
+            console.log(now, layers);
         });
 
         client.on('LayerTree.layerPainted', async function(layerId, clip) {
@@ -60,13 +58,17 @@ puppeteer.launch().then(async browser => {
             		console.log(now, layerId);
 
                 var snapshotId = await client.send('LayerTree.makeSnapshot', layerId);
+
+                // Get detailed canvas paint informations, seemingly used by Chrome to update a page.
+                var commandLog = await client.send('LayerTree.snapshotCommandLog', snapshotId);
+                for (var i = 0;i < commandLog.commandLog.length;i ++) {
+                    console.log(commandLog.commandLog[i].method);
+                    if (commandLog.commandLog[i].params)
+                        console.log(commandLog.commandLog[i].params);
+                }
+
+                // Save the image of relative layer.
                 var imgUrl = await client.send('LayerTree.replaySnapshot', snapshotId);
-
-                // console.log(typeof(imgUrl));
-                // console.log(imgUrl.dataURL);
-                // fs.writeFile('a.txt', imgUrl.dataURL, () => {});
-                // process.exit();
-
                 var base64Data = imgUrl.dataURL.replace(/^data:image\/\w+;base64,/, "");
                 var buffer = new Buffer(base64Data, 'base64');
                 fs.writeFile("tmp/" + now + ".png", buffer, () => {});
@@ -83,7 +85,7 @@ puppeteer.launch().then(async browser => {
     }
 
     // --> Always put this line at the end of file!
-    await page.goto('https://www.qq.com');
+    await page.goto('https://www.baidu.com');
 
     // ---> Hold command line window.
     var input = process.stdin.read();

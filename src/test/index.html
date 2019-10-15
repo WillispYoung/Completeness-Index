@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>Test XMLHttpRequest</title>
+</head>
+<body>
+	<script type="text/javascript">
+		xmlhttp = new XMLHttpRequest();
+		xmlhttp.onreadystatechange = () => {
+			if (xmlhttp.readyState === 4) {
+				console.log("Request finished.")
+			}
+		};
+		xmlhttp.open("GET", "test.txt", true);
+		
+		// xmlhttp.send(null);
+	</script>
+</body>	
+</html>
