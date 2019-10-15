@@ -21,7 +21,8 @@ setTimeout(function(){
 
 // 2. Time to First (Meaningful) Paint
 
-
+// 3. Inject rewrite code. 
+// Unable to process requests that are called during loading.
 var s = document.createElement("script");
 s.src = chrome.extension.getURL("js/rewrite_xmlhttp.js");
 s.onload = function() {
