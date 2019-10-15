@@ -1,19 +1,40 @@
 <!DOCTYPE html>
 <html>
+
 <head>
-	<title>Test XMLHttpRequest</title>
+    <title>Test XMLHttpRequest</title>
 </head>
+
 <body>
-	<script type="text/javascript">
-		xmlhttp = new XMLHttpRequest();
-		xmlhttp.onreadystatechange = () => {
-			if (xmlhttp.readyState === 4) {
-				console.log("Request finished.")
-			}
-		};
-		xmlhttp.open("GET", "test.txt", true);
-		
-		// xmlhttp.send(null);
-	</script>
-</body>	
+    <script type="text/javascript">
+    xmlhttp = new XMLHttpRequest();
+    xmlhttp.onreadystatechange = () => {
+        if (xmlhttp.readyState === 4) {
+            console.log("Request finished.")
+
+            res = xmlhttp.response;
+            console.log("Content:", res);
+        }
+    };
+    xmlhttp.open("GET", "test.txt", true);
+    xmlhttp.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
+    xmlhttp.send();
+
+    setTimeout(() => {
+        xmlhttp = new XMLHttpRequest();
+        xmlhttp.onreadystatechange = () => {
+            if (xmlhttp.readyState === 4) {
+                console.log("Request finished.")
+
+                res = xmlhttp.response;
+                console.log("Content:", res);
+            }
+        };
+        xmlhttp.open("GET", "test.txt", true);
+        xmlhttp.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
+        xmlhttp.send();
+    }, 2000);
+    </script>
+</body>
+
 </html>

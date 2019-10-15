@@ -4,27 +4,30 @@
     "description": "Measuring time-to-interactivity for web pages",
 
     "permissions": ["storage", "activeTab"],
-    "background": {
+    "background":
+    {
         "scripts": ["js/background.js"],
         "persistent": false
     },
 
-    "page_action": {
+    "page_action":
+    {
         "default_popup": "html/popup.html"
     },
 
     "content_scripts": [
-        {
-            "matches": ["<all_urls>"],
-            "js": ["js/before_load.js"],
-            "run_at": "document_start"
-        },
-        {
-            "matches": ["<all_urls>"],
-            "js": ["js/after_load.js"],
-            "run_at": "document_end"
-        }
-    ],
+    {
+        "matches": ["<all_urls>"],
+        "js": ["js/before_load.js"],
+        "run_at": "document_start"
+    },
+    {
+        "matches": ["<all_urls>"],
+        "js": ["js/after_load.js"],
+        "run_at": "document_end"
+    }],
+
+    "web_accessible_resources": ["js/rewrite_xmlhttp.js"],
 
     "manifest_version": 2
-  }
+}

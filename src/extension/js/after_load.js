@@ -20,3 +20,12 @@ setTimeout(function(){
 }, 2000);  // timeout should be conservative
 
 // 2. Time to First (Meaningful) Paint
+
+
+var s = document.createElement("script");
+s.src = chrome.extension.getURL("js/rewrite_xmlhttp.js");
+s.onload = function() {
+    this.remove();
+};
+(document.head || document.documentElement).appendChild(s);
+
