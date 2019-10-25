@@ -3,7 +3,7 @@ var start_page_load = new Date();
 const observer = new PerformanceObserver((list) => {
     for (const entry of list.getEntries()) {
         // `entry` is a PerformanceEntry instance.
-        console.log(entry.name, entry.startTime, entry.startTime + entry.duration);
+        console.log("observer:", entry.name, entry.startTime, entry.startTime + entry.duration);
         // console.log(entry.entryType);
         // console.log(JSON.stringify(entry.attribution));
         // console.log(entry.startTime); // DOMHighResTimeStamp

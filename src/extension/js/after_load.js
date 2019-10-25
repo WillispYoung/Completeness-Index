@@ -21,12 +21,7 @@ setTimeout(function(){
 
 // 2. Time to First (Meaningful) Paint
 
-// 3. Inject rewrite code. 
+// 3. Inject XHR rewriting code. 
 // Unable to process requests that are called during loading.
-var s = document.createElement("script");
-s.src = chrome.extension.getURL("js/rewrite_xmlhttp.js");
-s.onload = function() {
-    this.remove();
-};
-(document.head || document.documentElement).appendChild(s);
+// Update: no need to rewrite XMLHttpRequest to record informations, Chrome has already done this.
 
