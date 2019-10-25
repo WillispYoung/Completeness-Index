@@ -1,2 +1,2 @@
-# Page Interactivity Measurement
-Implementation on the measurement of time-to-interactivity for web pages.
+# Web Metrics Measurement
+Implementation on the measurement of severak metrics (including potentially new ones) for web pages.
