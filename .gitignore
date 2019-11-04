@@ -62,3 +62,6 @@ typings/
 
 # Chrome trace files
 trace*.json
+
+# VS Code Configuration
+.vs/

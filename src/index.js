@@ -14,7 +14,6 @@ events.forEach(event => {
 	category_name.add(`${event.cat}  ${event.name}`);
 });
 
-
 categories = Array.from(categories);
 categories.sort();
 console.log("Category:", categories);
@@ -23,5 +22,4 @@ console.log("Category:", categories);
 
 category_name = Array.from(category_name);
 category_name.sort();
-
-// category_name.forEach(d => console.log(d));
+category_name.forEach(d => console.log(d));
