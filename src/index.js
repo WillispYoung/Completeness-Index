@@ -1,83 +1,64 @@
 const EventEmitter = require('events');
 const puppeteer = require('puppeteer');
-const fs = require('fs');
 
-let url, trace_path;
+const eventEmitter = new EventEmitter();
 
-if (process.argv.length < 3) {
-    url = "about:blank";
-}
-else {
-    url = process.argv[2];
-}
+eventEmitter.once("domCreated", async args => {
+    mainDoc = await args.client.send("DOM.getDocument", {pierce: true});
+    inputs = await args.client.send("DOM.querySelectorAll", {nodeId: mainDoc.root.nodeId, selector: "input"});
 
-const emitter = new EventEmitter();
-
-emitter.on('traceEnd', () => {
-    console.log("Tracing finished.");
-
-    setTimeout(() => {
-        if (fs.existsSync(trace_path)) {
-            var content = JSON.parse(fs.readFileSync(trace_path));
-            var events = content.traceEvents;
-
-            var cat_name = {};
-
-            events.forEach(e => {
-                if (cat_name[e.cat]) {
-                    if (cat_name[e.cat][e.name])
-                        cat_name[e.cat][e.name] ++;
-                    else
-                        cat_name[e.cat][e.name] = 1;
-                }
-                else {
-                    cat_name[e.cat] = {};
-                    cat_name[e.cat][e.name] = 1;
-                }
-            });
-
-            // Object.keys(cat_name).forEach(key => {
-            //     cat_name[key] = Array.from(new Set(cat_name[key]));
-            // });
-
-            output = JSON.stringify(cat_name);
-            // while (output.includes('[')) {
-            //     output = output.replace('[', '{');
-            // }
-            // while (output.includes(']')) {
-            //     output = output.replace(']', '}');
-            // }
-            fs.writeFileSync(trace_path.replace('trace', 'category'), output);
-        }
-    }, 1000);
+    console.log("Inputs:", inputs);
+    inputs.nodeIds.forEach(async id => {
+        remoteObj = await args.client.send("DOM.resolveNode", {nodeId: id});
+    });
 });
 
 puppeteer.launch().then(async browser => {
-    now = new Date().toISOString();
-    while (now.includes(':')) {
-        now = now.replace(':', '-');
-    }
-    now.replace('\.', '-');
-    
-    final_url = url;
-    while (url.includes(':') || url.includes("/")) {
-        url = url.replace(':', '');
-        url = url.replace('/', '');
-    }
-
-    if (url.startsWith("https"))
-        trace_path = `trace-${url.substring(6)}-${now}.json`;
-    else if (url.startsWith("http"))
-        trace_path = `trace-${url.substring(5)}-${now}.json`;
-
     page = await browser.newPage();
-    await page.tracing.start({
-        path: trace_path,
-        screenshot: true
+    const client = await page.target().createCDPSession();
+
+    await client.send("Debugger.enable");
+    await client.send("DOM.enable");
+    await client.send("Runtime.enable");
+    await client.send("LayerTree.enable");
+    
+    client.on("Debugger.scriptParsed", async args => {
+        console.log("DEBUG.SrciptParsed", args.scriptId, args.url);
     });
-    await page.goto(final_url);
-    await page.tracing.stop().then(() => {
-        browser.close();
-        emitter.emit('traceEnd');
+
+    client.on("DOM.attributeModified", async args => {
+        console.log("DOM.AttrMod:", args.nodeId, args.name, args.value);
     });
+
+    client.on("DOM.childNodeInserted", async args => {
+        console.log("DOM.ChildNodeInsert:", args.parentNodeId, args.previousNodeId, args.node);
+    });
+
+    client.on("DOM.documentUpdated", () => {
+        console.log("DOM.DocUpdate");
+        eventEmitter.emit("domCreated", {page, client});
+    });
+
+    client.on("Runtime.bindingCalled", args => {
+        console.log("Runtime.BindCall:", args.name, args.payload);
+    });
+
+    client.on("Runtime.consoleAPICalled", args => {
+        console.log("Runtime.ConsoleAPI:", args.type, args.args);
+    });
+
+    client.on("Runtime.executionContextCreated", args => {
+        console.log("Runtime.ContextCreate:", args.context.name);
+    });
+
+    client.on("LayerTree.layerPainted", async args => {
+        console.log("LayerTree.LayerPaint:", args.clip);
+
+        snapshotId = await client.send("LayerTree.makeSnapshot", {layerId: args.layerId});
+        commandLog = await client.send("LayerTree.snapshotCommandLog", {snapshotId: snapshotId});
+
+        console.log(new Date(), commandLog.commandLog.length);
+    });
+
+    await page.goto("http://localhost:8000");
 });
