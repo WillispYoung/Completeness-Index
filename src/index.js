@@ -1,21 +1,75 @@
 const EventEmitter = require('events');
 const puppeteer = require('puppeteer');
+const fs = require('fs');
 
 const eventEmitter = new EventEmitter();
 
-eventEmitter.once("domCreated", async args => {
-    mainDoc = await args.client.send("DOM.getDocument", {pierce: true});
-    inputs = await args.client.send("DOM.querySelectorAll", {nodeId: mainDoc.root.nodeId, selector: "input"});
+logFiles = [];
+creatingSnapshodNum = 0;
+loadFinished = false;
 
-    console.log("Inputs:", inputs);
-    inputs.nodeIds.forEach(async id => {
-        remoteObj = await args.client.send("DOM.resolveNode", {nodeId: id});
+async function delay(t, val) {
+    return new Promise(function(resolve) {
+        setTimeout(function() {
+            resolve(val);
+        }, t);
     });
+ }
+
+async function closePageAndBrowser(page, browser) {
+    try {
+        await page.close();
+        await browser.close();
+    }
+    catch (e) {}
+}
+
+eventEmitter.on("domCreated", async args => {
+    try {
+        mainDoc = await args.client.send("DOM.getDocument", {pierce: true});
+        inputs = await args.client.send("DOM.querySelectorAll", {nodeId: mainDoc.root.nodeId, selector: "input"});
+
+        console.log("Inputs:", inputs);
+        inputs.nodeIds.forEach(async id => {
+            remoteObj = await args.client.send("DOM.resolveNode", {nodeId: id});
+        });
+    }
+    catch (e) {
+        // console.log(e);
+    }
+});
+
+eventEmitter.once('load', async args => {
+    if (!loadFinished || creatingSnapshodNum !== 0) return;
+
+    await closePageAndBrowser(args.page, args.browser);
+    eventEmitter.emit('loadFinish');
+});
+
+eventEmitter.on("createSnapshot", () => {
+    creatingSnapshodNum += 1;
+});
+
+eventEmitter.on("finishSnapshot", () => {
+    creatingSnapshodNum -= 1;
+});
+
+eventEmitter.on('loadFinish', () => {
+    // Analyze paint logs
+    
 });
 
 puppeteer.launch().then(async browser => {
     page = await browser.newPage();
+    await page.setViewport({width: 1000, height: 800});
+
     const client = await page.target().createCDPSession();
+
+    page.on('load', async () => {
+        await delay(2000);
+        loadFinished = true;
+        eventEmitter.emit('load', {page, browser});
+    });
 
     await client.send("Debugger.enable");
     await client.send("DOM.enable");
@@ -52,13 +106,29 @@ puppeteer.launch().then(async browser => {
     });
 
     client.on("LayerTree.layerPainted", async args => {
-        console.log("LayerTree.LayerPaint:", args.clip);
+        if (loadFinished) return;
 
-        snapshotId = await client.send("LayerTree.makeSnapshot", {layerId: args.layerId});
-        commandLog = await client.send("LayerTree.snapshotCommandLog", {snapshotId: snapshotId});
+        try {
+            eventEmitter.emit('createSnapshot');
 
-        console.log(new Date(), commandLog.commandLog.length);
-    });
+            snapshotId = await client.send("LayerTree.makeSnapshot", {layerId: args.layerId});
+            commandLog = await client.send("LayerTree.snapshotCommandLog", {snapshotId: snapshotId.snapshotId});
+            if (commandLog) {
+                now = Date.now();
+                logFiles.push(now);
+                fs.writeFileSync(`${now}.json`, JSON.stringify(commandLog));
+            }
+
+            eventEmitter.emit("finishSnapshot");
+            
+            if (loadFinished && creatingSnapshodNum === 0) {
+                eventEmitter.emit("load", {page, browser});
+            }
+        }
+        catch (e) {
+            console.log(e);
+        }
+    }); 
 
     await page.goto("http://localhost:8000");
 });

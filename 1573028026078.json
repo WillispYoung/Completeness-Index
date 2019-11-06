@@ -1,0 +1,349 @@
+{
+    "commandLog": [
+    {
+        "method": "drawPaint",
+        "params":
+        {
+            "paint":
+            {
+                "color": "#00000000",
+                "strokeWidth": 0,
+                "strokeMiter": 4,
+                "flags": "none",
+                "filterLevel": "None",
+                "strokeCap": "Butt",
+                "strokeJoin": "Miter",
+                "styleName": "Fill",
+                "blendMode": "Src"
+            }
+        }
+    },
+    {
+        "method": "drawRect",
+        "params":
+        {
+            "rect":
+            {
+                "left": 0,
+                "top": 0,
+                "right": 1000,
+                "bottom": 800
+            },
+            "paint":
+            {
+                "color": "#FFFFFFFF",
+                "strokeWidth": 0,
+                "strokeMiter": 4,
+                "flags": "AntiAlias",
+                "filterLevel": "Low",
+                "strokeCap": "Butt",
+                "strokeJoin": "Miter",
+                "styleName": "Fill",
+                "blendMode": "Src"
+            }
+        }
+    },
+    {
+        "method": "drawTextBlob",
+        "params":
+        {
+            "x": 8,
+            "y": 30,
+            "paint":
+            {
+                "color": "#FF000000",
+                "strokeWidth": 0,
+                "strokeMiter": 4,
+                "flags": "AntiAlias",
+                "filterLevel": "Low",
+                "strokeCap": "Butt",
+                "strokeJoin": "Miter",
+                "styleName": "Fill"
+            }
+        }
+    },
+    {
+        "method": "drawTextBlob",
+        "params":
+        {
+            "x": 8,
+            "y": 64,
+            "paint":
+            {
+                "color": "#FF000000",
+                "strokeWidth": 0,
+                "strokeMiter": 4,
+                "flags": "AntiAlias",
+                "filterLevel": "Low",
+                "strokeCap": "Butt",
+                "strokeJoin": "Miter",
+                "styleName": "Fill"
+            }
+        }
+    },
+    {
+        "method": "drawRect",
+        "params":
+        {
+            "rect":
+            {
+                "left": 8,
+                "top": 84,
+                "right": 181,
+                "bottom": 105
+            },
+            "paint":
+            {
+                "color": "#FFFFFFFF",
+                "strokeWidth": 0,
+                "strokeMiter": 4,
+                "flags": "AntiAlias",
+                "filterLevel": "Low",
+                "strokeCap": "Butt",
+                "strokeJoin": "Miter",
+                "styleName": "Fill"
+            }
+        }
+    },
+    {
+        "method": "save"
+    },
+    {
+        "method": "clipRect",
+        "params":
+        {
+            "rect":
+            {
+                "left": 8,
+                "top": 84,
+                "right": 181,
+                "bottom": 105
+            },
+            "SkRegion::Op": "kIntersect_Op",
+            "softClipEdgeStyle": false
+        }
+    },
+    {
+        "method": "drawRect",
+        "params":
+        {
+            "rect":
+            {
+                "left": 8,
+                "top": 84,
+                "right": 180,
+                "bottom": 104
+            },
+            "paint":
+            {
+                "color": "#FFFFFFFF",
+                "strokeWidth": 0,
+                "strokeMiter": 4,
+                "flags": "none",
+                "filterLevel": "None",
+                "strokeCap": "Butt",
+                "strokeJoin": "Miter",
+                "styleName": "Fill"
+            }
+        }
+    },
+    {
+        "method": "drawRect",
+        "params":
+        {
+            "rect":
+            {
+                "left": 8,
+                "top": 84,
+                "right": 180,
+                "bottom": 104
+            },
+            "paint":
+            {
+                "color": "#FFA9A9A9",
+                "strokeWidth": 0,
+                "strokeMiter": 4,
+                "flags": "none",
+                "filterLevel": "None",
+                "strokeCap": "Butt",
+                "strokeJoin": "Miter",
+                "styleName": "Stroke"
+            }
+        }
+    },
+    {
+        "method": "restore"
+    },
+    {
+        "method": "drawTextBlob",
+        "params":
+        {
+            "x": 181,
+            "y": 99,
+            "paint":
+            {
+                "color": "#FF000000",
+                "strokeWidth": 0,
+                "strokeMiter": 4,
+                "flags": "AntiAlias",
+                "filterLevel": "Low",
+                "strokeCap": "Butt",
+                "strokeJoin": "Miter",
+                "styleName": "Fill"
+            }
+        }
+    },
+    {
+        "method": "save"
+    },
+    {
+        "method": "clipRect",
+        "params":
+        {
+            "rect":
+            {
+                "left": 185,
+                "top": 84,
+                "right": 240,
+                "bottom": 105
+            },
+            "SkRegion::Op": "kIntersect_Op",
+            "softClipEdgeStyle": false
+        }
+    },
+    {
+        "method": "drawRRect",
+        "params":
+        {
+            "rrect":
+            {
+                "type": "Simple",
+                "left": 185,
+                "top": 84,
+                "right": 240,
+                "bottom": 105,
+                "upperLeftRadius":
+                {
+                    "xRadius": 1,
+                    "yRadius": 1
+                },
+                "upperRightRadius":
+                {
+                    "xRadius": 1,
+                    "yRadius": 1
+                },
+                "lowerRightRadius":
+                {
+                    "xRadius": 1,
+                    "yRadius": 1
+                },
+                "lowerLeftRadius":
+                {
+                    "xRadius": 1,
+                    "yRadius": 1
+                }
+            },
+            "paint":
+            {
+                "shader":
+                {},
+                "color": "#FF000000",
+                "strokeWidth": 0,
+                "strokeMiter": 4,
+                "flags": "AntiAlias",
+                "filterLevel": "None",
+                "strokeCap": "Butt",
+                "strokeJoin": "Miter",
+                "styleName": "Fill"
+            }
+        }
+    },
+    {
+        "method": "drawRRect",
+        "params":
+        {
+            "rrect":
+            {
+                "type": "Simple",
+                "left": 185.5,
+                "top": 84.5,
+                "right": 239.5,
+                "bottom": 104.5,
+                "upperLeftRadius":
+                {
+                    "xRadius": 1,
+                    "yRadius": 1
+                },
+                "upperRightRadius":
+                {
+                    "xRadius": 1,
+                    "yRadius": 1
+                },
+                "lowerRightRadius":
+                {
+                    "xRadius": 1,
+                    "yRadius": 1
+                },
+                "lowerLeftRadius":
+                {
+                    "xRadius": 1,
+                    "yRadius": 1
+                }
+            },
+            "paint":
+            {
+                "color": "#55000000",
+                "strokeWidth": 1,
+                "strokeMiter": 4,
+                "flags": "AntiAlias",
+                "filterLevel": "None",
+                "strokeCap": "Butt",
+                "strokeJoin": "Miter",
+                "styleName": "Stroke"
+            }
+        }
+    },
+    {
+        "method": "restore"
+    },
+    {
+        "method": "save"
+    },
+    {
+        "method": "clipRect",
+        "params":
+        {
+            "rect":
+            {
+                "left": 187,
+                "top": 86,
+                "right": 238,
+                "bottom": 103
+            },
+            "SkRegion::Op": "kIntersect_Op",
+            "softClipEdgeStyle": true
+        }
+    },
+    {
+        "method": "drawTextBlob",
+        "params":
+        {
+            "x": 193,
+            "y": 99,
+            "paint":
+            {
+                "color": "#FF000000",
+                "strokeWidth": 0,
+                "strokeMiter": 4,
+                "flags": "AntiAlias",
+                "filterLevel": "Low",
+                "strokeCap": "Butt",
+                "strokeJoin": "Miter",
+                "styleName": "Fill"
+            }
+        }
+    },
+    {
+        "method": "restore"
+    }]
+}
