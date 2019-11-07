@@ -14,7 +14,7 @@ async function delay(t, val) {
             resolve(val);
         }, t);
     });
- }
+}
 
 async function closePageAndBrowser(page, browser) {
     try {
@@ -34,9 +34,7 @@ eventEmitter.on("domCreated", async args => {
             remoteObj = await args.client.send("DOM.resolveNode", {nodeId: id});
         });
     }
-    catch (e) {
-        // console.log(e);
-    }
+    catch (e) {}
 });
 
 eventEmitter.once('load', async args => {
@@ -55,7 +53,7 @@ eventEmitter.on("finishSnapshot", () => {
 });
 
 eventEmitter.on('loadFinish', () => {
-    // Analyze paint logs
+    console.log("Paint captured:", logFiles);
     
 });
 
@@ -66,14 +64,16 @@ puppeteer.launch().then(async browser => {
     const client = await page.target().createCDPSession();
 
     page.on('load', async () => {
+        console.log("Load triggered:", Date.now());
+
         await delay(2000);
         loadFinished = true;
         eventEmitter.emit('load', {page, browser});
     });
 
-    await client.send("Debugger.enable");
-    await client.send("DOM.enable");
-    await client.send("Runtime.enable");
+    // await client.send("Debugger.enable");
+    // await client.send("DOM.enable");
+    // await client.send("Runtime.enable");
     await client.send("LayerTree.enable");
     
     client.on("Debugger.scriptParsed", async args => {
@@ -130,5 +130,5 @@ puppeteer.launch().then(async browser => {
         }
     }); 
 
-    await page.goto("http://localhost:8000");
+    await page.goto("https://www.baidu.com");
 });
