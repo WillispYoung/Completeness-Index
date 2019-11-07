@@ -8,6 +8,10 @@ logFiles = [];
 creatingSnapshodNum = 0;
 loadFinished = false;
 
+function rectAcreage(rect) {
+    return Math.round((rect.bottom - rect.top) * (rect.right - rect.left));
+}
+
 async function delay(t, val) {
     return new Promise(function(resolve) {
         setTimeout(function() {
@@ -55,6 +59,14 @@ eventEmitter.on("finishSnapshot", () => {
 eventEmitter.on('loadFinish', () => {
     console.log("Paint captured:", logFiles);
     
+    logFiles.forEach(lf => {
+        var content = JSON.parse(fs.readFileSync(`${lf}.json`));
+        content.commandLog.forEach(log => {
+            switch (log.method) {
+                
+            }
+        });
+    });
 });
 
 puppeteer.launch().then(async browser => {
