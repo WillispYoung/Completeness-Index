@@ -59,13 +59,35 @@ eventEmitter.on("finishSnapshot", () => {
 eventEmitter.on('loadFinish', () => {
     console.log("Paint captured:", logFiles);
     
+    rects = [];
+    acreages = [];
+
     logFiles.forEach(lf => {
         var content = JSON.parse(fs.readFileSync(`${lf}.json`));
         content.commandLog.forEach(log => {
             switch (log.method) {
-                
+                case "drawRect":
+                    rects.push(log.params.rect);
+                    break;
+                case "drawImageRect":
+                    rects.push(log.params.dst);
+                    break;
+                default:
+                    break; 
             }
         });
+
+        actual_paint_acreage = 0;
+        rects.forEach(r => {
+            actual_paint_acreage += rectAcreage(r);
+        });
+        acreages.push(actual_paint_acreage);
+    });
+
+    console.log(acreages);
+
+    logFiles.forEach(lf => {
+        fs.unlinkSync(`${lf}.json`);
     });
 });
 
@@ -138,9 +160,9 @@ puppeteer.launch().then(async browser => {
             }
         }
         catch (e) {
-            console.log(e);
+            // console.log(e);
         }
     }); 
 
-    await page.goto("https://www.baidu.com");
+    await page.goto("http://learn.tsinghua.edu.cn");
 });
