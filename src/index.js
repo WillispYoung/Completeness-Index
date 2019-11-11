@@ -141,10 +141,9 @@ puppeteer.launch().then(async browser => {
 
     client.on("LayerTree.layerPainted", async args => {
         if (loadFinished) return;
+        eventEmitter.emit('createSnapshot');
 
         try {
-            eventEmitter.emit('createSnapshot');
-
             snapshotId = await client.send("LayerTree.makeSnapshot", {layerId: args.layerId});
             commandLog = await client.send("LayerTree.snapshotCommandLog", {snapshotId: snapshotId.snapshotId});
             if (commandLog) {
@@ -152,17 +151,14 @@ puppeteer.launch().then(async browser => {
                 logFiles.push(now);
                 fs.writeFileSync(`${now}.json`, JSON.stringify(commandLog));
             }
-
-            eventEmitter.emit("finishSnapshot");
-            
-            if (loadFinished && creatingSnapshodNum === 0) {
-                eventEmitter.emit("load", {page, browser});
-            }
         }
         catch (e) {
             // console.log(e);
         }
+
+        eventEmitter.emit("finishSnapshot");
+        eventEmitter.emit("load", {page, browser});
     }); 
 
-    await page.goto("http://learn.tsinghua.edu.cn");
+    await page.goto("http://localhost:8000");
 });
