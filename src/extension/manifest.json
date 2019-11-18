@@ -1,7 +1,7 @@
 {
-    "name": "Measure TTI",
+    "name": "Web Metric",
     "version": "1.0",
-    "description": "Measuring time-to-interactivity for web pages",
+    "description": "Measuring certain metrics for web pages",
 
     "permissions": ["storage", "activeTab"],
     "background":

@@ -1,19 +1,44 @@
 var start_page_load = new Date();
 
-const observer = new PerformanceObserver((list) => {
+const pObserver = new PerformanceObserver((list) => {
     for (const entry of list.getEntries()) {
-        // `entry` is a PerformanceEntry instance.
-        console.log("observer:", entry.name, entry.startTime, entry.startTime + entry.duration);
-        // console.log(entry.entryType);
-        // console.log(JSON.stringify(entry.attribution));
-        // console.log(entry.startTime); // DOMHighResTimeStamp
-        // console.log(entry.duration); // DOMHighResTimeStamp
+        console.log("PO:", entry);
     }
 });
-
-// Start observing the entry types you care about.
-// entryTypes include `mark`, `measure`, `frame`, `resource`, `paint`, `longtask` ...
-// `paint`: TFP, TFCP
-// `longtask`: TTI, really limited information yet.
-observer.observe({ entryTypes: ['longtask', 'resource'] });
-
+const mObserver = new MutationObserver((mutations) => {
+    // console.log("MO:", mutations);
+    mutations.forEach(record => {
+        switch (record.type) {
+            case "childList":
+                if (record.addedNodes) {
+                    nodes = [];
+                    Array.from(record.addedNodes).forEach(d => {
+                        nodes.push(d.nodeName);
+                    });
+                    console.log(`MO:${record.type}:${record.target.nodeName}:add:${nodes.join("|")}`);
+                }
+                else {
+                    nodes = [];
+                    Array.from(record.removedNodes).forEach(d => {
+                        nodes.push(d.nodeName);
+                    });
+                    console.log(`MO:${record.type}:${record.target.nodeName}:remove:${nodes.join("|")}`);
+                }
+                break;
+            case "attribute":
+                console.log(`MO:${record.type}:${record.target}:${record.attributeName}`);
+                break;
+            case "characterData":
+                console.log(`MO:${record.type}:${record.target}:${record.attributeName}`);
+            default:
+                break;
+        }
+    });
+});
+// pObserver.observe({ entryTypes: ['longtask', 'resource'] });
+mObserver.observe(document, {
+    attributes: true,
+    childList: true,
+    subtree: true,
+    attributeFilter: ['href', 'src'],
+});
