@@ -1,44 +1,82 @@
-var start_page_load = new Date();
-
-const pObserver = new PerformanceObserver((list) => {
-    for (const entry of list.getEntries()) {
-        console.log("PO:", entry);
-    }
-});
-const mObserver = new MutationObserver((mutations) => {
-    // console.log("MO:", mutations);
-    mutations.forEach(record => {
-        switch (record.type) {
-            case "childList":
-                if (record.addedNodes) {
-                    nodes = [];
-                    Array.from(record.addedNodes).forEach(d => {
-                        nodes.push(d.nodeName);
-                    });
-                    console.log(`MO:${record.type}:${record.target.nodeName}:add:${nodes.join("|")}`);
-                }
-                else {
-                    nodes = [];
-                    Array.from(record.removedNodes).forEach(d => {
-                        nodes.push(d.nodeName);
-                    });
-                    console.log(`MO:${record.type}:${record.target.nodeName}:remove:${nodes.join("|")}`);
-                }
-                break;
-            case "attribute":
-                console.log(`MO:${record.type}:${record.target}:${record.attributeName}`);
-                break;
-            case "characterData":
-                console.log(`MO:${record.type}:${record.target}:${record.attributeName}`);
-            default:
-                break;
+function activateObserver() {
+    var range = document.createRange();
+    const mObserver = new MutationObserver((mutations) => {
+        // console.log("MO:", mutations);
+        mutations.forEach(record => {
+            switch (record.type) {
+                case "childList":
+                    if (record.addedNodes) {
+                        nodes = [];
+                        Array.from(record.addedNodes).forEach(d => {
+                            var area = 0;
+                            switch (d.nodeType) {
+                                case 1:     // ELEMENT_NODE
+                                    rect = d.getBoundingClientRect();
+                                    area = Math.round(rect.width * d.height);
+                                    break;
+                                case 3:     // TEXT_NODE
+                                    range.selectNodeContents(d);
+                                    rects = range.getClientRects();
+                                    if (rects.length) {
+                                        area = Math.round(rects[0].width * rects[0].height);
+                                    }
+                                    break;
+                                default:
+                                    break;
+                            }
+                            if (area)
+                                nodes.push(`${d.nodeName}[${area}]`);
+                        });
+                        if (nodes.length)
+                            console.log(`MO:${Date.now()}:${record.type}:${record.target.nodeName}:add:${nodes.join("|")}`);
+                    }
+                    else {
+                        nodes = [];
+                        Array.from(record.removedNodes).forEach(d => {
+                            var area = 0;
+                            switch (d.nodeType) {
+                                case 1:     // ELEMENT_NODE
+                                    rect = d.getBoundingClientRect();
+                                    area = Math.round(rect.width * d.height);
+                                    break;
+                                case 3:     // TEXT_NODE
+                                    range.selectNodeContents(d);
+                                    rects = range.getClientRects();
+                                    if (rects.length) {
+                                        area = Math.round(rects[0].width * rects[0].height);
+                                    }
+                                    break;
+                                default:
+                                    break;
+                            }
+                            if (area)
+                                nodes.push(`${d.nodeName}[${area}]`);
+                        });
+                        if (nodes.length)
+                            console.log(`MO:${Date.now()}:${record.type}:${record.target.nodeName}:remove:${nodes.join("|")}`);
+                    }
+                    break;
+                case "attribute":
+                    console.log(`MO:${Date.now()}:${record.type}:${record.target.nodeName}:${record.attributeName}`);
+                    break;
+                case "characterData":
+                    console.log(`MO:${Date.now()}:${record.type}:${record.target.nodeName}:${record.attributeName}`);
+                default:
+                    break;
+            }
+        });
+    });
+    const pObserver = new PerformanceObserver((list) => {
+        for (const entry of list.getEntries()) {
+            console.log(`PO:${Date.now()}:${entry.entryType}:${Math.round(entry.startTime)}:${Math.round(entry.duration)}:${entry.name}`);
         }
     });
-});
-// pObserver.observe({ entryTypes: ['longtask', 'resource'] });
-mObserver.observe(document, {
-    attributes: true,
-    childList: true,
-    subtree: true,
-    attributeFilter: ['href', 'src'],
-});
+    mObserver.observe(document, {
+        attributes: true,
+        childList: true,
+        subtree: true,
+        // attributeFilter: [],
+    });
+    pObserver.observe({ entryTypes: ['longtask', 'resource'] });
+}
+activateObserver();

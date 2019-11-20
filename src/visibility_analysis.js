@@ -11,50 +11,50 @@ async function delay(t, val) {
 const target_url = "https://www.baidu.com";
 
 const eventList = [
-    "DOM.attributeModified",
-    "DOM.attributeRemoved",
-    "DOM.characterDataModified",
-    "DOM.childNodeInserted",
-    "DOM.childNodeRemoved",
-    "DOM.distributedNodesUpdated",
-    "DOM.documentUpdated",
-    "DOM.inlineStyleInvalidated",
-    "DOM.pseudoElementAdded",
-    "DOM.pseudoElementRemoved",
+    // "DOM.attributeModified",
+    // "DOM.attributeRemoved",
+    // "DOM.characterDataModified",
+    // "DOM.childNodeInserted",
+    // "DOM.childNodeRemoved",
+    // "DOM.distributedNodesUpdated",
+    // "DOM.documentUpdated",
+    // "DOM.inlineStyleInvalidated",
+    // "DOM.pseudoElementAdded",
+    // "DOM.pseudoElementRemoved",
 
     "CSS.styleSheetAdded",
-    "CSS.styleSheetChanged",
-    "CSS.styleSheetRemoved",
+    // "CSS.styleSheetChanged",
+    // "CSS.styleSheetRemoved",
 
     "Debugger.scriptParsed",
-    "Debugger.scriptFailedToParse",
+    // "Debugger.scriptFailedToParse",
 
-    "Runtime.consoleAPICalled",
+    // "Runtime.consoleAPICalled",
 
     "LayerTree.layerPainted",
     "LayerTree.layerTreeDidChange"
 ];
 
 const listenerList = [
-    onDomAttributeModified,
-    onDomAttributeRemoved,
-    onDomCharacterDataModified,
-    onDomChildNodeInserted,
-    onDomChildNodeRemoved,
-    onDomDistributedNodesUpdated,
-    onDomDocumentUpdated,
-    onDomInlineStyleInvalidated,
-    onDomPseudoElementAdded,
-    onDomPseudoElementRemoved,
+    // onDomAttributeModified,
+    // onDomAttributeRemoved,
+    // onDomCharacterDataModified,
+    // onDomChildNodeInserted,
+    // onDomChildNodeRemoved,
+    // onDomDistributedNodesUpdated,
+    // onDomDocumentUpdated,
+    // onDomInlineStyleInvalidated,
+    // onDomPseudoElementAdded,
+    // onDomPseudoElementRemoved,
 
     onCssStyleSheetAdded,
-    onCssStyleSheetChanged,
-    onCssStyleSheetRemoved,
+    // onCssStyleSheetChanged,
+    // onCssStyleSheetRemoved,
 
     onDebuggerScriptParsed,
-    onDebuggerScriptFailedToParse,
+    // onDebuggerScriptFailedToParse,
 
-    onRuntimeConsoleApiCalled,
+    // onRuntimeConsoleApiCalled,
 
     onLayerTreeLayerPainted,
     onLayerTreeLayerTreeDidChange
@@ -82,33 +82,26 @@ puppeteer.launch().then(async browser => {
         }
     });
 
-    // const client = await page.target().createCDPSession();
-    // await client.send("DOM.enable");
+    const client = await page.target().createCDPSession();
+    await client.send("DOM.enable");
     // await client.send("DOMSnapshot.enable");
-    // await client.send("CSS.enable");
-    // await client.send("Debugger.enable");
+    await client.send("CSS.enable");
+    await client.send("Debugger.enable");
     // await client.send("Runtime.enable");
-    // await client.send("LayerTree.enable");
+    await client.send("LayerTree.enable");
 
-    // obString = activateObserver.toString().split("\r\n");
-    // obString = obString.slice(1, obString.length - 1);
-    // console.log(obString.join('\r\n'));
-    // await client.send("Runtime.evaluate", { expression: obString.join('\r\n') });
-
-    // for (var i = 0; i < eventList.length; i ++) {
-    //     addListener(client, eventList[i], listenerList[i]);
-    // }
+    for (var i = 0; i < eventList.length; i++) {
+        addListener(client, eventList[i], listenerList[i]);
+    }
 
     await page.evaluateOnNewDocument(activateObserver);
+
+    const START_TIME = new Date().getTime();
     await page.goto(target_url);
 });
 
 function activateObserver() {
-    const pObserver = new PerformanceObserver((list) => {
-        for (const entry of list.getEntries()) {
-            console.log("PO:", entry);
-        }
-    });
+    var range = document.createRange();
     const mObserver = new MutationObserver((mutations) => {
         // console.log("MO:", mutations);
         mutations.forEach(record => {
@@ -117,39 +110,76 @@ function activateObserver() {
                     if (record.addedNodes) {
                         nodes = [];
                         Array.from(record.addedNodes).forEach(d => {
-                            nodes.push(d.nodeName);
+                            var area = 0;
+                            switch (d.nodeType) {
+                                case 1:     // ELEMENT_NODE
+                                    rect = d.getBoundingClientRect();
+                                    area = Math.round(rect.width * d.height);
+                                    break;
+                                case 3:     // TEXT_NODE
+                                    range.selectNodeContents(d);
+                                    rects = range.getClientRects();
+                                    if (rects.length) {
+                                        area = Math.round(rects[0].width * rects[0].height);
+                                    }
+                                    break;
+                                default:
+                                    break;
+                            }
+                            if (area)
+                                nodes.push(`${d.nodeName}[${area}]`);
                         });
-                        console.log(`MO:${record.type}:${record.target.nodeName}:add:${nodes.join("|")}`);
+                        if (nodes.length)
+                            console.log(`MO:${Date.now()}:${record.type}:${record.target.nodeName}:add:${nodes.join("|")}`);
                     }
                     else {
                         nodes = [];
                         Array.from(record.removedNodes).forEach(d => {
-                            nodes.push(d.nodeName);
+                            var area = 0;
+                            switch (d.nodeType) {
+                                case 1:     // ELEMENT_NODE
+                                    rect = d.getBoundingClientRect();
+                                    area = Math.round(rect.width * d.height);
+                                    break;
+                                case 3:     // TEXT_NODE
+                                    range.selectNodeContents(d);
+                                    rects = range.getClientRects();
+                                    if (rects.length) {
+                                        area = Math.round(rects[0].width * rects[0].height);
+                                    }
+                                    break;
+                                default:
+                                    break;
+                            }
+                            if (area)
+                                nodes.push(`${d.nodeName}[${area}]`);
                         });
-                        console.log(`MO:${record.type}:${record.target.nodeName}:remove:${nodes.join("|")}`);
+                        if (nodes.length)
+                            console.log(`MO:${Date.now()}:${record.type}:${record.target.nodeName}:remove:${nodes.join("|")}`);
                     }
                     break;
                 case "attribute":
-                    console.log(`MO:${record.type}:${record.target}:${record.attributeName}`);
+                    console.log(`MO:${Date.now()}:${record.type}:${record.target.nodeName}:${record.attributeName}`);
                     break;
                 case "characterData":
-                    console.log(`MO:${record.type}:${record.target}:${record.attributeName}`);
+                    console.log(`MO:${Date.now()}:${record.type}:${record.target.nodeName}:${record.attributeName}`);
                 default:
                     break;
             }
         });
     });
-    // pObserver.observe({ entryTypes: ['longtask', 'resource'] });
+    const pObserver = new PerformanceObserver((list) => {
+        for (const entry of list.getEntries()) {
+            console.log(`PO:${Date.now()}:${entry.entryType}:${Math.round(entry.startTime)}:${Math.round(entry.duration)}:${entry.name}`);
+        }
+    });
     mObserver.observe(document, {
         attributes: true,
         childList: true,
         subtree: true,
-        attributeFilter: ['href', 'src'],
+        // attributeFilter: [],
     });
-}
-
-function test() {
-    console.log("test");
+    pObserver.observe({ entryTypes: ['longtask', 'resource'] });
 }
 
 function labeledOutput(name) {
@@ -205,7 +235,8 @@ async function onDomPseudoElementRemoved(params) {
 }
 
 async function onCssStyleSheetAdded(params) {
-    this.log_(params);
+    // this.log_(params);
+    this.log_(`CSS_ADD:${Date.now()}:${params.header.startLine}:${params.header.endLine}:${params.header.sourceURL}`);
 }
 
 async function onCssStyleSheetChanged(params) {
@@ -217,7 +248,8 @@ async function onCssStyleSheetRemoved(params) {
 }
 
 async function onDebuggerScriptParsed(params) {
-    this.log_(params);
+    // this.log_(params);
+    this.log_(`SCRIPT_ADD:${Date.now()}:${params.startLine}:${params.endLine}:${params.url}`);
 }
 
 async function onDebuggerScriptFailedToParse(params) {
@@ -226,15 +258,16 @@ async function onDebuggerScriptFailedToParse(params) {
 
 async function onRuntimeConsoleApiCalled(params) {
     this.log_(params);
-    params.args.forEach(d => {
-        this.log_(d.value);
-    });
 }
 
 async function onLayerTreeLayerPainted(params) {
-    this.log_(params);
+    // this.log_(params);
+    this.log_(`LAYER_PAINT:${Date.now()}:[${params.clip.x},${params.clip.y},${params.clip.width},${params.clip.height}]`)
 }
 
 async function onLayerTreeLayerTreeDidChange(params) {
-    this.log_(params);
+    // this.log_(params);
+    if (params.layers) {
+        this.log_(`LAYER_TREE_CHANGE:${Date.now()}:`);
+    }
 }
