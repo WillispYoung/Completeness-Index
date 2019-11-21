@@ -7,7 +7,7 @@ const trace_categories = [
     'blink.user_timing',
     'devtools.timeline',
     'disabled-by-default-devtools.timeline',
-]
+];
 
 const eventList = [
     "CSS.styleSheetAdded",
@@ -31,10 +31,16 @@ const listenerList = [
 
 let BACKEND_START, NAVIGATION_START;
 
-mutationRecords = []
-performanceRecords = []
-backendRecords = []
-layerTrees = []
+mutationRecords = [];
+performanceRecords = [];
+backendRecords = [];
+tracEvents = undefined;
+
+layerTrees = [];
+
+requestCount = 0;
+requestIndex = {};
+requestList = [];
 
 puppeteer.launch().then(async browser => {
     page = await browser.newPage();
@@ -44,25 +50,9 @@ puppeteer.launch().then(async browser => {
         await page.tracing.stop();
         await page.close();
         await browser.close();
+
         syntheticalAnalysis();
     });
-
-    // page.on("console", async msg => {
-    //     if (msg.text().startsWith("MO")) {
-    //         mutationRecords.push(msg.text());
-    //     }
-    //     else if (msg.text().startsWith("PO")) {
-    //         performanceRecords.push(msg.text());
-    //     }
-    // });
-
-    // page.on("request", async args => {
-    //     console.log("request", args);
-    // });
-
-    // page.on("response", async args => {
-    //     console.log("response", args);
-    // });
 
     client = await page.target().createCDPSession();
 
@@ -85,6 +75,7 @@ puppeteer.launch().then(async browser => {
     await page.evaluateOnNewDocument(activateObserver);
 
     BACKEND_START = Date.now();
+
     await page.goto(target_url);
 });
 
@@ -180,34 +171,73 @@ async function delay(t, val) {
 }
 
 async function onCssStyleSheetAdded(params) {
-    backendRecords.push(`CSS_ADD:${Date.now()}:${params.header.startLine}:${params.header.endLine}:${params.header.sourceURL}`);
+    // backendRecords.push(`CSS_ADD:${Date.now()}:${params.header.startLine}:${params.header.endLine}:${params.header.sourceURL}`);
+    backendRecords.push({
+        type: "CSS_ADD",
+        ts: Date.now() - BACKEND_START,
+        startLine: params.header.startLine,
+        endLine: params.header.endLine || 0,
+        url: params.header.sourceURL
+    })
 }
 
 async function onDebuggerScriptParsed(params) {
-    backendRecords.push(`SCRIPT_ADD:${Date.now()}:${params.startLine}:${params.endLine}:${params.url}`);
+    // backendRecords.push(`SCRIPT_ADD:${Date.now()}:${params.startLine}:${params.endLine}:${params.url}`);
+    backendRecords.push({
+        type: "SCRIPT_PARSE",
+        ts: Date.now() - BACKEND_START,
+        startLine: params.startLine,
+        endLine: params.endLine,
+        url: params.url
+    });
 }
 
 async function onRuntimeConsoleApiCalled(params) {
     // params.args.forEach(d => { console.log(d.value); });
+    params.args.forEach(d => {
+        if (d.value.startsWith("PO")) performanceRecords.push(d.value);
+        else if (d.value.startsWith("MO")) mutationRecords.push(d.value);
+    });
 }
 
 async function onLayerTreeLayerPainted(params) {
-    backendRecords.push(`LAYER_PAINT:${Date.now()}:[${params.clip.x},${params.clip.y},${params.clip.width},${params.clip.height}]`)
+    // backendRecords.push(`LAYER_PAINT:${Date.now()}:[${params.clip.x},${params.clip.y},${params.clip.width},${params.clip.height}]`)
+    backendRecords.push({
+        type: "LAYER_PAINT",
+        ts: Date.now() - BACKEND_START,
+        clip: params.clip
+    });
 }
 
 async function onLayerTreeLayerTreeDidChange(params) {
     if (params.layers) {
         layerTrees.push(params.layers)
-        backendRecords.push(`LAYER_TREE_CHANGE:${Date.now()}:${layerTrees.length - 1}`);
+        // backendRecords.push(`LAYER_TREE_CHANGE:${Date.now()}:${layerTrees.length - 1}`);
+        backendRecords.push({
+            type: "LAYER_TREE_CHANGE",
+            ts: Date.now() - BACKEND_START,
+            index: layerTrees.length - 1
+        });
     }
 }
 
 async function onNetworkRequestWillBeSent(params) {
-    console.log(params.requestId, params.documentURL);
+    // console.log(params.requestId, params.request.url);
+    requestIndex[params.requestId] = requestCount;
+    requestCount += 1;
+    requestList.push({
+        type: "REQUEST",
+        startTime: Date.now() - BACKEND_START,
+        url: params.request.url,
+        requestId: params.requestId
+    });
 }
 
 async function onNetworkResponseReceived(params) {
-    console.log(params.requestId);
+    // console.log(params.requestId);
+    request = requestList[requestIndex[params.requestId]];
+    request.endTime = Date.now() - BACKEND_START;
+    backendRecords.push(request);
 }
 
 function parsePerformanceRecords(records) {
@@ -344,13 +374,13 @@ function syntheticalAnalysis() {
     // Parse string to object, with clock synchronization.
     performanceRecords = parsePerformanceRecords(performanceRecords);
     mutationRecords = parseMutationRecords(mutationRecords);
-    backendRecords = parseBackendRecords(backendRecords);
+
     traceEvents.forEach(d => { if (d.ts) { d.ts = Math.round((d.ts - NAVIGATION_START) / 1000); } });
     resourceRequests = traceEvents.filter(d => d.name === "ResourceSendRequest")
 
     // console.log(performanceRecords);
     // console.log(mutationRecords);
-    // console.log(backendRecords);
+    console.log(backendRecords);
     // console.log(traceEvents);
 
     performanceRecords.forEach(d => {
