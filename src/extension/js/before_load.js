@@ -1,7 +1,7 @@
 function activateObserver() {
     var range = document.createRange();
     const mObserver = new MutationObserver((mutations) => {
-        // console.log("MO:", mutations);
+        // console.log("mutation:", mutations.length);
         mutations.forEach(record => {
             switch (record.type) {
                 case "childList":
@@ -12,12 +12,14 @@ function activateObserver() {
                             switch (d.nodeType) {
                                 case 1:     // ELEMENT_NODE
                                     rect = d.getBoundingClientRect();
-                                    area = Math.round(rect.width * d.height);
+                                    // console.log(d.nodeName, rect);
+                                    area = Math.round(rect.width * rect.height);
                                     break;
                                 case 3:     // TEXT_NODE
                                     range.selectNodeContents(d);
                                     rects = range.getClientRects();
                                     if (rects.length) {
+                                        // console.log(d.nodeName, rects[0]);
                                         area = Math.round(rects[0].width * rects[0].height);
                                     }
                                     break;
@@ -61,6 +63,7 @@ function activateObserver() {
                     break;
                 case "characterData":
                     console.log(`MO:${Date.now()}:${record.type}:${record.target.nodeName}:${record.attributeName}`);
+                    break;
                 default:
                     break;
             }

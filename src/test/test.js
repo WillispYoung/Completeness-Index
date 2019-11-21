@@ -1,10 +1,7 @@
-function a() {
-    console.log("x");
-}
+x = [{t: 1}, {t: 2}]
 
-// console.log(a.toString().split("\r\n"));
-// console.log(typeof a.toString());
+x.forEach(d => {
+    d.t ++;
+});
 
-arr = a.toString().split("\r\n");
-arr = arr.slice(1, this.length - 1);
-console.log(arr.join(''));
+console.log(x);
