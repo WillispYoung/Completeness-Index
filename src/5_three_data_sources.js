@@ -12,9 +12,8 @@ const trace_categories = [
 const eventList = [
     "CSS.styleSheetAdded",
     "Debugger.scriptParsed",
-    "Runtime.consoleAPICalled",
     "LayerTree.layerPainted",
-    // "LayerTree.layerTreeDidChange",
+    "LayerTree.layerTreeDidChange",
     "Network.requestWillBeSent",
     "Network.responseReceived",
 ];
@@ -24,7 +23,7 @@ const listenerList = [
     onDebuggerScriptParsed,
     onRuntimeConsoleApiCalled,
     onLayerTreeLayerPainted,
-    // onLayerTreeLayerTreeDidChange,
+    onLayerTreeLayerTreeDidChange,
     onNetworkRequestWillBeSent,
     onNetworkResponseReceived,
 ];
@@ -37,6 +36,7 @@ backendRecords = [];
 
 domSnapshots = [];
 // layerTrees = [];            // This information is almost userless. 
+commandLogs = [];
 
 requestCount = 0;
 requestIndex = {};              // { id : index }
@@ -122,20 +122,32 @@ async function onDebuggerScriptParsed(params) {
     });
 }
 
-async function onRuntimeConsoleApiCalled(params) {
-    params.args.forEach(d => {
-        if (d.value.startsWith("PO")) performanceRecords.push(d.value);
-    });
+async function onLayerTreeLayerPainted(params) {
+    start = Date.now();
+    snapshot = await this.send("LayerTree.makeSnapshot", {layerId: params.layerId});
+    end = Date.now();
+    console.log("Layer snapshot takes", end-start, "ms");
+
+    start = end;
+    cLogs = await this.send("LayerTree.snapshotCommandLog", {snapshotId: snapshot.snapshotId});
+    end = Date.now();
+    console.log("Command logs take", end-start, "ms");
+
+    commandLogs.push(cLogs);
 }
 
-async function onLayerTreeLayerPainted(params) {
+async function onLayerTreeLayerTreeDidChange(params) {
     // snapshot={documents=[DocumentSnapshot],strings=[string]}
-    // DocumentSnapshot contains NodeTreeSnapshot, LayerTreeSnapshot and TextBoxSnapshot
+    // DocumentSnapshot contains NodeTreeSnapshot, LayerTreeSnapshot and TextBoxSnapshot.
+    const start = Date.now();
     snapshot = await this.send("DOMSnapshot.captureSnapshot", {
         computedStyles: ["top", "left", "width", "height"],
         includePaintOrder: true,
         includeDOMRects: true
     });
+    const end = Date.now();
+    console.log("DOM snapshot takes", end-start, "ms")
+
     snapshot.ts = Date.now() - BACKEND_START;
     domSnapshots.push(snapshot);
 
@@ -145,18 +157,6 @@ async function onLayerTreeLayerPainted(params) {
         clip: params.clip,
         index: domSnapshots.length - 1
     });
-}
-
-async function onLayerTreeLayerTreeDidChange(params) {
-    if (params.layers) {
-        layerTrees.push(params.layers)
-        // backendRecords.push(`LAYER_TREE_CHANGE:${Date.now()}:${layerTrees.length - 1}`);
-        backendRecords.push({
-            type: "LAYER_TREE_CHANGE",
-            ts: Date.now() - BACKEND_START,
-            index: layerTrees.length - 1
-        });
-    }
 }
 
 async function onNetworkRequestWillBeSent(params) {
@@ -282,12 +282,11 @@ function syntheticalAnalysis() {
                 break;
             }
         }
-        console.log(url, t1, t7, '|', t3, t4, t2, '|', t5, t6);
+        console.log(url, ':', 'Trace', t1, t7, '|', 'Performance', t3, t4, t2, '|', 'Backend', t5, t6);
     });
-    // Backend data is way later than in-page script or trace logs.
 
-    fs.unlinkSync(trace_path);
-    console.log("Trace file removed.");
+    // fs.unlinkSync(trace_path);
+    // console.log("Trace file removed.");
 }
 
 // Resource: fetch (trace, backend) -> parse (trace)
