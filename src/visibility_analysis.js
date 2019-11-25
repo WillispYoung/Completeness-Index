@@ -14,7 +14,7 @@ const eventList = [
     "Debugger.scriptParsed",
     "Runtime.consoleAPICalled",
     "LayerTree.layerPainted",
-    "LayerTree.layerTreeDidChange",
+    // "LayerTree.layerTreeDidChange",
     "Network.requestWillBeSent",
     "Network.responseReceived",
 ];
@@ -24,22 +24,22 @@ const listenerList = [
     onDebuggerScriptParsed,
     onRuntimeConsoleApiCalled,
     onLayerTreeLayerPainted,
-    onLayerTreeLayerTreeDidChange,
+    // onLayerTreeLayerTreeDidChange,
     onNetworkRequestWillBeSent,
     onNetworkResponseReceived,
 ];
 
 let BACKEND_START, NAVIGATION_START;
 
-mutationRecords = [];
+// mutationRecords = [];
 performanceRecords = [];
 backendRecords = [];
-tracEvents = undefined;
 
-layerTrees = [];
+domSnapshots = [];
+// layerTrees = [];            // This information is almost userless. 
 
 requestCount = 0;
-requestIndex = {};
+requestIndex = {};              // { id : index }
 requestList = [];
 
 puppeteer.launch().then(async browser => {
@@ -57,15 +57,14 @@ puppeteer.launch().then(async browser => {
     client = await page.target().createCDPSession();
 
     await client.send("DOM.enable");
+    await client.send("DOMSnapshot.enable");
     await client.send("CSS.enable");
     await client.send("Debugger.enable");
     await client.send("Runtime.enable");
     await client.send("LayerTree.enable");
     await client.send("Network.enable");
 
-    for (var i = 0; i < eventList.length; i++) {
-        client.on(eventList[i], listenerList[i]);
-    }
+    await bindEventListener(client);
 
     await page.tracing.start({
         path: trace_path,
@@ -74,90 +73,16 @@ puppeteer.launch().then(async browser => {
 
     await page.evaluateOnNewDocument(activateObserver);
 
-    BACKEND_START = Date.now();
+    BACKEND_START = Date.now();         // millisecond
 
     await page.goto(target_url);
 });
 
 function activateObserver() {
-    var range = document.createRange();
-    const mObserver = new MutationObserver((mutations) => {
-        // console.log("mutation:", mutations.length);
-        mutations.forEach(record => {
-            switch (record.type) {
-                case "childList":
-                    if (record.addedNodes) {
-                        nodes = [];
-                        Array.from(record.addedNodes).forEach(d => {
-                            let rect;
-                            switch (d.nodeType) {
-                                case 1:     // ELEMENT_NODE
-                                    rect = d.getBoundingClientRect();
-                                    // console.log(d.nodeName, rect);
-                                    break;
-                                case 3:     // TEXT_NODE
-                                    range.selectNodeContents(d);
-                                    rects = range.getClientRects();
-                                    if (rects.length) {
-                                        // console.log(d.nodeName, rects[0]);
-                                        rect = rects[0];
-                                    }
-                                    break;
-                                default:
-                                    break;
-                            }
-                            if (rect)
-                                nodes.push(`${d.nodeName}[${rect.left},${rect.top},${rect.width},${rect.height}]`);
-                        });
-                        if (nodes.length)
-                            console.log(`MO:${Date.now()}:${record.type}:${record.target.nodeName}:add:${nodes.join("|")}`);
-                    }
-                    else {
-                        nodes = [];
-                        Array.from(record.removedNodes).forEach(d => {
-                            let rect;
-                            switch (d.nodeType) {
-                                case 1:     // ELEMENT_NODE
-                                    rect = d.getBoundingClientRect();
-                                    break;
-                                case 3:     // TEXT_NODE
-                                    range.selectNodeContents(d);
-                                    rects = range.getClientRects();
-                                    if (rects.length) {
-                                        rect = rects[0];
-                                    }
-                                    break;
-                                default:
-                                    break;
-                            }
-                            if (rect)
-                                nodes.push(`${d.nodeName}[${rect.left},${rect.top},${rect.width},${rect.height}]`);
-                        });
-                        if (nodes.length)
-                            console.log(`MO:${Date.now()}:${record.type}:${record.target.nodeName}:remove:${nodes.join("|")}`);
-                    }
-                    break;
-                case "attribute":
-                    console.log(`MO:${Date.now()}:${record.type}:${record.target.nodeName}:${record.attributeName}`);
-                    break;
-                case "characterData":
-                    console.log(`MO:${Date.now()}:${record.type}:${record.target.nodeName}:${record.attributeName}`);
-                    break;
-                default:
-                    break;
-            }
-        });
-    });
     const pObserver = new PerformanceObserver((list) => {
         for (const entry of list.getEntries()) {
             console.log(`PO:${Date.now()}:${entry.entryType}:${Math.round(entry.startTime)}:${Math.round(entry.duration)}:${entry.name}`);
         }
-    });
-    mObserver.observe(document, {
-        attributes: true,
-        childList: true,
-        subtree: true,
-        // attributeFilter: [],
     });
     pObserver.observe({ entryTypes: ['longtask', 'resource'] });
 }
@@ -170,8 +95,14 @@ async function delay(t, val) {
     });
 }
 
+async function bindEventListener(client) {
+    for (var i = 0; i < eventList.length; i++) {
+        bindedListener = listenerList[i].bind(client);
+        client.on(eventList[i], bindedListener);
+    }
+}
+
 async function onCssStyleSheetAdded(params) {
-    // backendRecords.push(`CSS_ADD:${Date.now()}:${params.header.startLine}:${params.header.endLine}:${params.header.sourceURL}`);
     backendRecords.push({
         type: "CSS_ADD",
         ts: Date.now() - BACKEND_START,
@@ -182,7 +113,6 @@ async function onCssStyleSheetAdded(params) {
 }
 
 async function onDebuggerScriptParsed(params) {
-    // backendRecords.push(`SCRIPT_ADD:${Date.now()}:${params.startLine}:${params.endLine}:${params.url}`);
     backendRecords.push({
         type: "SCRIPT_PARSE",
         ts: Date.now() - BACKEND_START,
@@ -193,19 +123,27 @@ async function onDebuggerScriptParsed(params) {
 }
 
 async function onRuntimeConsoleApiCalled(params) {
-    // params.args.forEach(d => { console.log(d.value); });
     params.args.forEach(d => {
         if (d.value.startsWith("PO")) performanceRecords.push(d.value);
-        else if (d.value.startsWith("MO")) mutationRecords.push(d.value);
     });
 }
 
 async function onLayerTreeLayerPainted(params) {
-    // backendRecords.push(`LAYER_PAINT:${Date.now()}:[${params.clip.x},${params.clip.y},${params.clip.width},${params.clip.height}]`)
+    // snapshot={documents=[DocumentSnapshot],strings=[string]}
+    // DocumentSnapshot contains NodeTreeSnapshot, LayerTreeSnapshot and TextBoxSnapshot
+    snapshot = await this.send("DOMSnapshot.captureSnapshot", {
+        computedStyles: ["top", "left", "width", "height"],
+        includePaintOrder: true,
+        includeDOMRects: true
+    });
+    snapshot.ts = Date.now() - BACKEND_START;
+    domSnapshots.push(snapshot);
+
     backendRecords.push({
         type: "LAYER_PAINT",
         ts: Date.now() - BACKEND_START,
-        clip: params.clip
+        clip: params.clip,
+        index: domSnapshots.length - 1
     });
 }
 
@@ -222,7 +160,6 @@ async function onLayerTreeLayerTreeDidChange(params) {
 }
 
 async function onNetworkRequestWillBeSent(params) {
-    // console.log(params.requestId, params.request.url);
     requestIndex[params.requestId] = requestCount;
     requestCount += 1;
     requestList.push({
@@ -234,16 +171,15 @@ async function onNetworkRequestWillBeSent(params) {
 }
 
 async function onNetworkResponseReceived(params) {
-    // console.log(params.requestId);
     request = requestList[requestIndex[params.requestId]];
     request.endTime = Date.now() - BACKEND_START;
     backendRecords.push(request);
 }
 
 function parsePerformanceRecords(records) {
-    parsedRecords = []
+    parsedRecords = [];
     records.forEach(d => {
-        colonIndex = []
+        colonIndex = [];
         for (var i = 0; i < d.length; i++) {
             if (d[i] === ':') colonIndex.push(i);
             if (colonIndex.length === 5) break;
@@ -252,7 +188,7 @@ function parsePerformanceRecords(records) {
         parsedRecords.push({
             ts: parseInt(d.slice(colonIndex[0] + 1, colonIndex[1])) - BACKEND_START,
             type: d.slice(colonIndex[1] + 1, colonIndex[2]),
-            startTime: parseInt(d.slice(colonIndex[2] + 1, colonIndex[3])) - BACKEND_START,
+            startTime: parseInt(d.slice(colonIndex[2] + 1, colonIndex[3])),
             duration: parseInt(d.slice(colonIndex[3] + 1, colonIndex[4])),
             name: d.slice(colonIndex[4] + 1)
         })
@@ -276,7 +212,7 @@ function parseMutationRecords(records) {
                 }
             }
             if (!type && colonIndex.length === 3) {
-                type = d.slice(colonIndex[1] + 1, colonIndex[2])
+                type = d.slice(colonIndex[1] + 1, colonIndex[2]);
             }
         }
         if (type) {
@@ -309,90 +245,52 @@ function parseMutationRecords(records) {
     return parsedRecords;
 }
 
-function parseBackendRecords(records) {
-    parsedRecords = [];
-    records.forEach(d => {
-        let type;
-        if (d.startsWith("CSS_ADD")) type = "CSS_ADD";
-        else if (d.startsWith("SCRIPT_ADD")) type = "SCRIPT_ADD";
-        else if (d.startsWith("LAYER_PAINT")) type = "LAYER_PAINT";
-        else if (d.startsWith("LAYER_TREE_CHANGE")) type = "LAYER_TREE_CHANGE";
-
-        if (!type) return;
-
-        colonIndex = [];
-        for (var i = 0; i < d.length; i++) {
-            if (d[i] == ':') colonIndex.push(i);
-            if (type === "CSS_ADD" || type === "SCRIPT_ADD") {
-                if (colonIndex.length === 4) break;
-            }
-            else if (type === "LAYER_PAINT" || type === "LAYER_TREE_CHANGE") {
-                if (colonIndex.length === 2) break;
-            }
-        }
-
-        switch (type) {
-            case "CSS_ADD":
-            case "SCRIPT_ADD":
-                if (colonIndex.length !== 4) return;
-                parsedRecords.push({
-                    type: type,
-                    ts: parseInt(d.slice(colonIndex[0] + 1, colonIndex[1])) - BACKEND_START,
-                    startLine: parseInt(d.slice(colonIndex[1] + 1, colonIndex[2])),
-                    endLine: parseInt(d.slice(colonIndex[2] + 1, colonIndex[3])),
-                    url: d.slice(colonIndex[3] + 1)
-                });
-                break;
-            case "LAYER_PAINT":
-                if (colonIndex.length !== 2) return;
-                parsedRecords.push({
-                    type: type,
-                    ts: parseInt(d.slice(colonIndex[0] + 1, colonIndex[1])) - BACKEND_START,
-                    clip: d.slice(colonIndex[1] + 1)
-                });
-                break;
-            case "LAYER_TREE_CHANGE":
-                if (colonIndex.length !== 2) return;
-                parsedRecords.push({
-                    type: type,
-                    ts: parseInt(d.slice(colonIndex[0] + 1, colonIndex[1])) - BACKEND_START,
-                    treeIndex: parseInt(d.slice(colonIndex[1] + 1))
-                });
-                break;
-            default:
-                break;
-        }
-    });
-    return parsedRecords;
-}
-
 function syntheticalAnalysis() {
-    traceEvents = JSON.parse(fs.readFileSync(trace_path)).traceEvents;
-
-    NAVIGATION_START = traceEvents.find(d => d.name === "navigationStart").ts;
-
-    // Parse string to object, with clock synchronization.
+    // mutationRecords = parseMutationRecords(mutationRecords);
     performanceRecords = parsePerformanceRecords(performanceRecords);
-    mutationRecords = parseMutationRecords(mutationRecords);
 
+    traceEvents = JSON.parse(fs.readFileSync(trace_path)).traceEvents;
+    NAVIGATION_START = traceEvents.find(d => d.name === "navigationStart").ts;      // microsecond
     traceEvents.forEach(d => { if (d.ts) { d.ts = Math.round((d.ts - NAVIGATION_START) / 1000); } });
-    resourceRequests = traceEvents.filter(d => d.name === "ResourceSendRequest")
 
-    // console.log(performanceRecords);
-    // console.log(mutationRecords);
-    console.log(backendRecords);
-    // console.log(traceEvents);
-
-    performanceRecords.forEach(d => {
-        url = d.name;
-        for (var i = 0; i < resourceRequests.length; i++) {
-            if (url === resourceRequests[i].args.data.url) {
-                console.log(d.ts, resourceRequests[i].ts, url);
-                return;
+    // Computation:
+    tRequest = traceEvents.filter(d => d.name === "ResourceSendRequest");
+    tResponse = traceEvents.filter(d => d.name === "ResourceReceiveResponse");
+    bRequest = backendRecords.filter(d => d.type === "REQUEST");
+    tRequest.forEach(d => {
+        let t1, t2, t3, t4, t5, t6, t7;
+        t1 = d.ts;
+        url = d.args.data.url;
+        for (var i = 0;i < performanceRecords.length;i ++)  {
+            if (performanceRecords[i].name === url) {
+                t2 = performanceRecords[i].ts;
+                t3 = performanceRecords[i].startTime;
+                t4 = performanceRecords[i].startTime + performanceRecords[i].duration;
+                break;
             }
         }
+        for (var i = 0;i < bRequest.length;i ++) {
+            if (bRequest[i].url === url) {
+                t5 = bRequest[i].startTime;
+                t6 = bRequest[i].endTime;
+                break;
+            }
+        }
+        for (var i = 0;i < tResponse.length;i ++) {
+            if (tResponse[i].args.data.requestId === d.args.data.requestId)  {
+                t7 = tResponse[i].ts;
+                break;
+            }
+        }
+        console.log(url, t1, t7, '|', t3, t4, t2, '|', t5, t6);
     });
+    // Backend data is way later than in-page script or trace logs.
 
     fs.unlinkSync(trace_path);
     console.log("Trace file removed.");
 }
+
+// Resource: fetch (trace, backend) -> parse (trace)
+// DOM update: mutation observer (may not work), DOM snapshot, trace (require redundant HTML analysis)
+// Paint: backend 
+// Functionality: script evaluation (trace)
