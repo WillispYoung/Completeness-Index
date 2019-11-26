@@ -1,7 +1,7 @@
 const puppeteer = require("puppeteer");
 const fs = require("fs");
 
-function main() {
+function loadPage() {
     const TRACE_PATH = `output/trace_6_${Date.now()}.json`;
     const TRACE_CATEGORIES = [
         'blink.user_timing',
@@ -9,7 +9,7 @@ function main() {
         'disabled-by-default-devtools.timeline',
     ]
     const TARGET_URL = "https://www.baidu.com";
-    let BACKEND_START, NAVIGATION_START;
+    let BACKEND_START, NAVIGATION_START, res;
 
     paintLogs = [];
     domSnapshots = [];
@@ -30,7 +30,7 @@ function main() {
                 await page.close();
                 await browser.close();
 
-                analysis();
+                res = analysis();
 
                 fs.unlinkSync(TRACE_PATH);
                 console.log("Tracing file removed.");
@@ -41,11 +41,6 @@ function main() {
         await client.send("DOM.enable");
         await client.send("DOMSnapshot.enable");
         await client.send("LayerTree.enable");
-
-        // Never happens. WHY?
-        client.on("DOM.inlineStyleInvalidated", async params => {
-            console.log("Inline style invalidated:", params);
-        });
 
         client.on("LayerTree.layerPainted", async params => {
             if (page_loaded) return;
@@ -83,7 +78,7 @@ function main() {
                 }
                 if (browser) await browser.close();
 
-                ananlysis();
+                res = ananlysis();
 
                 fs.unlinkSync(TRACE_PATH);
                 console.log("Tracing file removed.");
@@ -111,8 +106,8 @@ function main() {
         paintLogs.forEach(d => d.ts -= BACKEND_START);
         domSnapshots.forEach(d => d.ts -= BACKEND_START);
 
-        
+        return {traceEvents, paintLogs, domSnapshots};
     }
-}
 
-main();
+    return res;
+}

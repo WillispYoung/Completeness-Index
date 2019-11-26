@@ -31,9 +31,9 @@ Tracing and Backend **Clock Synchronization**: the `Navigation Start` timestamp 
     4. `Network.requestWillBeSent`
     5. `Network.responseReceived`
 
-    Event (1) accounts for when a stylesheet is completely parsed, event (2) when a script is completely parsed. Event (3) accounts for an actual paint, when this event is triggered, we need to capture DOM snapshot and command log for relative layer snapshot. Event (4) and (5) account for request and response monitored, which are mapped according to `requestId`. 
+Event (1) accounts for when a stylesheet is completely parsed, event (2) when a script is completely parsed. Event (3) accounts for an actual paint, when this event is triggered, we need to capture DOM snapshot and command log for relative layer snapshot. Event (4) and (5) account for request and response monitored, which are mapped according to `requestId`. 
 
-    As snapshots can only be captured at Backend, we only monitor Event (3), and access other events from Tracing.
+As snapshots can only be captured at Backend, we only monitor Event (3), and access other events from Tracing.
 
 #### Computation
 
@@ -65,8 +65,7 @@ Tracing and Backend **Clock Synchronization**: the `Navigation Start` timestamp 
 
 5. **domComplete**: the timestamp when the parser finished its work on the *main document*, as when `Document.readyState` changes to `'complete'`, and corresponding `readystatechange` event is thrown.
 
-    **Event Sequence** (earlier to later): 
-`readystatechange[interactive]` < `DOMContentLoaded` < `readystatechange[complete]` < `loadEventEnd` 
+**Event Order**: `readystatechange[interactive]` -> `DOMContentLoaded` -> `readystatechange[complete]` -> `loadEventEnd` 
 
 ### Metrics
 
