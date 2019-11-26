@@ -8,7 +8,7 @@ Web performance of a certain page is the performance of **the process that certa
 
 ### Computation
 
-* Data Credibility
+#### Data Credibility
 
 There are mainly 3 data sources:
 1. DevTools Tracing
@@ -19,28 +19,35 @@ Tracing (1) is in microsecond granularity, while the others are in milliseconds.
 
 As Tracing (1) cannot keep dynamic information, *DOM snapshot* and *Layer snapshot* are captured to represent time-sensitive information. With simple experiment, capturing DOM / Layer snapshots would take up to 100 ms (usually happens for capturing the **1st** DOM snapshot), while normally no more than 30 ms. This delay is supposed to be caused by CPU workloads, yet seemed as acceptable and would not cause great inaccuracy. 
 
-To avoid influencing page load process, we would only user Tracing (1) and Backend (2) as the data sources. [ HOW TO ADDRESS SUCH INFLUENCE? ]
+To avoid influencing page load process, we would only user Tracing (1) and Backend (2) as the data sources. [ **HOW TO ADDRESS SUCH INFLUENCE?** ]
 
-Tracing and Backend **Clock Synchronization**: the `Navigation Start` timestamp is treated as the start of page loading in Trcing file, yet at Backend, the timestamp before `Page.goto(url)` is treated as the start.
+Tracing and Backend **Clock Synchronization**: the `Navigation Start` timestamp is treated as the start of page loading in Tracing file, yet at Backend, the timestamp before `Page.goto(url)` is treated as the start.
 
 * Events
 
-1. `CSS.styleSheetAdded`
-2. `Debugger.scriptParsed`
-3. `LayerTree.layerPainted`
-4. `Network.requestWillBeSent`
-5. `Network.responseReceived`
+    1. `CSS.styleSheetAdded`
+    2. `Debugger.scriptParsed`
+    3. `LayerTree.layerPainted`
+    4. `Network.requestWillBeSent`
+    5. `Network.responseReceived`
 
 Event (1) accounts for when a stylesheet is completely parsed, event (2) when a script is completely parsed. Event (3) accounts for an actual paint, when this event is triggered, we need to capture DOM snapshot and command log for relative layer snapshot. Event (4) and (5) account for request and response monitored, which are mapped according to `requestId`. 
 
-As snapshots can only be captured in Backend, we only monitor Event (3), and access other events from Tracing.
+As snapshots can only be captured at Backend, we only monitor Event (3), and access other events from Tracing.
 
-* Computation
+#### Computation
 
-### Paint Events of Interest
+* Paint Events of Interest
 
-1. drawRect
-2. drawImageRect
-3. drawTextBlob
-4. drawRRect
-5. drawCircle and etc.
+    1. drawRect
+    2. drawImageRect
+    3. drawTextBlob
+    4. drawRRect
+    5. drawCircle and etc.
+
+### Highlights
+
+* Introducing Browser's Role
+* Data Source for Page Performance
+* Definition of Performance Metric
+* How Precise the New Metric is 

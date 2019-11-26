@@ -2,20 +2,20 @@ const puppeteer = require("puppeteer");
 const fs = require("fs");
 
 function main() {
-    const trace_path = `output/trace_6_${Date.now()}.json`;
-    const trace_categories = [
+    const TRACE_PATH = `output/trace_6_${Date.now()}.json`;
+    const TRACE_CATEGORIES = [
         'blink.user_timing',
         'devtools.timeline',
         'disabled-by-default-devtools.timeline',
     ]
-    const target_url = "https://www.baidu.com";
+    const TARGET_URL = "https://www.baidu.com";
     let BACKEND_START, NAVIGATION_START;
 
-    domSnapshots = [];
     paintLogs = [];
+    domSnapshots = [];
 
-    page_loaded = false;
     ongoing_paint = 0;
+    page_loaded = false;
 
     puppeteer.launch().then(async browser => {
         page = await browser.newPage();
@@ -23,13 +23,16 @@ function main() {
 
         page.on("load", async () => {
             page_loaded = true;
-            console.log("Page loaded at", Date.now());
+            console.log("Page loaded.");
+
             if (ongoing_paint === 0) {
                 await page.tracing.stop();
                 await page.close();
                 await browser.close();
 
-                fs.unlinkSync(trace_path);
+                analysis();
+
+                fs.unlinkSync(TRACE_PATH);
                 console.log("Tracing file removed.");
             }
         });
@@ -45,7 +48,6 @@ function main() {
             ongoing_paint += 1;
             try {
                 start = Date.now();
-
                 dom = await client.send("DOMSnapshot.captureSnapshot", {
                     computedStyles: ["top", "left", "width", "height"],
                     includePaintOrder: true,
@@ -76,19 +78,36 @@ function main() {
                 }
                 if (browser) await browser.close();
 
-                fs.unlinkSync(trace_path);
+                ananlysis();
+
+                fs.unlinkSync(TRACE_PATH);
                 console.log("Tracing file removed.");
             }
         });
 
         await page.tracing.start({
-            path: trace_path,
-            categories: trace_categories,
+            path: TRACE_PATH,
+            categories: TRACE_CATEGORIES,
         })
 
         BACKEND_START = Date.now();
-        await page.goto(target_url);
+        await page.goto(TARGET_URL);
     });
+
+    function ananlysis() {
+        traceEvents = JSON.parse(fs.readFileSync(TRACE_PATH)).traceEvents;
+        NAVIGATION_START = traceEvents.find(d => d.name === "navigationStart").ts;
+
+        traceEvents.forEach(d => {
+            d.ts = (d.ts - NAVIGATION_START) / 1000;
+            if (d.dur) d.dur /= 1000;
+        });
+
+        paintLogs.forEach(d => d.ts -= BACKEND_START);
+        domSnapshots.forEach(d => d.ts -= BACKEND_START);
+
+        
+    }
 }
 
 main();
