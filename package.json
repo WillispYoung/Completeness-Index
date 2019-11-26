@@ -1,7 +1,7 @@
 {
-  "name": "completeness-index",
+  "name": "web-metric",
   "version": "1.0.0",
-  "description": "Implementation on the measurement of time-to-interactivity for web pages.",
+  "description": "Implementation on the measurement of several metric (including potentially new ones) for web pages, with other findings and analysis.",
   "main": "src/index.js",
   "directories": {
     "doc": "doc"
@@ -14,9 +14,12 @@
     "puppeteer": "^1.20.0",
     "ws": "^7.2.0"
   },
-  "devDependencies": {},
+  "devDependencies": {
+    "electron": "^7.1.2"
+  },
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "electron ."
   },
   "repository": {
     "type": "git",

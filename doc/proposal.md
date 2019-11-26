@@ -1,1 +1,0 @@
-This repository is inspired by **Measuring Time-to-Interativity for Web Users** in _NSDI'18_.

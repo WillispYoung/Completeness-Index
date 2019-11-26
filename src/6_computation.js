@@ -42,6 +42,11 @@ function main() {
         await client.send("DOMSnapshot.enable");
         await client.send("LayerTree.enable");
 
+        // Never happens. WHY?
+        client.on("DOM.inlineStyleInvalidated", async params => {
+            console.log("Inline style invalidated:", params);
+        });
+
         client.on("LayerTree.layerPainted", async params => {
             if (page_loaded) return;
 

@@ -31,9 +31,9 @@ Tracing and Backend **Clock Synchronization**: the `Navigation Start` timestamp 
     4. `Network.requestWillBeSent`
     5. `Network.responseReceived`
 
-Event (1) accounts for when a stylesheet is completely parsed, event (2) when a script is completely parsed. Event (3) accounts for an actual paint, when this event is triggered, we need to capture DOM snapshot and command log for relative layer snapshot. Event (4) and (5) account for request and response monitored, which are mapped according to `requestId`. 
+    Event (1) accounts for when a stylesheet is completely parsed, event (2) when a script is completely parsed. Event (3) accounts for an actual paint, when this event is triggered, we need to capture DOM snapshot and command log for relative layer snapshot. Event (4) and (5) account for request and response monitored, which are mapped according to `requestId`. 
 
-As snapshots can only be captured at Backend, we only monitor Event (3), and access other events from Tracing.
+    As snapshots can only be captured at Backend, we only monitor Event (3), and access other events from Tracing.
 
 #### Computation
 
@@ -49,5 +49,33 @@ As snapshots can only be captured at Backend, we only monitor Event (3), and acc
 
 * Introducing Browser's Role
 * Data Source for Page Performance
+* Finer Granularity (Millisecond to Microsecond)
 * Definition of Performance Metric
-* How Precise the New Metric is 
+* How Precise the New Metric Depicts Page Loading Process
+
+### Loading Timepoints
+
+1. **navigationStart**: the timestamp (in milisecond) when previous document's unload terminates.
+
+2. **loadEventEnd**: the timestamp when load (whole page, including all dependent resources are loaded) event terminates.
+
+3. **requestStart**, **responseEnd**: the timestamp for the start of request and end of response for the *main document*, probably emitting the time spent in parsing the response.
+
+4. **domLoading**: the timestamp when the parser starts working, as when `Document.readyState` changes to `'loading'` and corresponding `readystatechange` event is thrown.
+
+5. **domComplete**: the timestamp when the parser finished its work on the *main document*, as when `Document.readyState` changes to `'complete'`, and corresponding `readystatechange` event is thrown.
+
+    **Event Sequence** (earlier to later): 
+`readystatechange[interactive]` < `DOMContentLoaded` < `readystatechange[complete]` < `loadEventEnd` 
+
+### Metrics
+
+1. Speed Index
+
+2. Time to Interactive
+
+3. Input Latency
+
+4. Total Blocking Time
+
+5. Max Potential First Input Delay
