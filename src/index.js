@@ -1,5 +1,7 @@
-const { app, ipcMain, BrowserWindow } = require('electron');
+const { app, ipcMain, ipcRenderer, BrowserWindow } = require('electron');
 const puppeteer = require("puppeteer");
+const cleaner = require("clean-html");
+const request = require("request");
 const fs = require("fs");
 
 const WINDOW_SIZE = { width: 800, height: 600 };
@@ -14,8 +16,10 @@ const TRACE_PATH = `src/output/trace_${Date.now()}.json`;
 let TARGET_URL, BACKEND_START, NAVIGATION_START;
 let mainDoc, paintLogs, domSnapshots, traceEvents;
 
+let window;
+
 app.on('ready', () => {
-	let win = new BrowserWindow({
+	window = new BrowserWindow({
 		width: WINDOW_SIZE.width,
 		height: WINDOW_SIZE.height,
 		webPreferences: {
@@ -23,25 +27,70 @@ app.on('ready', () => {
 		}
 	});
 
-	win.loadFile('src/index.html');
-	win.webContents.openDevTools()
+	window.loadFile('src/index.html');
+	// window.webContents.openDevTools();
 });
 
-ipcMain.on("asynchronous-message", (_, arg) => {
-	console.log(arg);
-	
+ipcMain.on("asynchronous-message", (event, arg) => {
+	switch (arg.name) {
+		case "PASS-URL":
+			if (!arg.url) {
+				event.reply("asynchronous-reply", {
+					name: "PASS-URL", type: "error", value: "Input URL to continue!"
+				});
+			}
+			else {
+				request.get(arg.url, (error, response, body) => {
+					if (error || response.statusCode !== 200) {
+						event.reply("asynchronous-reply", {
+							name: "PASS-URL", type: "error", value: "URL cannot be retrived!"
+						});
+					}
+					else {
+						TARGET_URL = arg.url;
+						cleaner.clean(body, output => { mainDoc = output; });
+						mainDoc = documentSimplication(mainDoc);
+						// event.reply("asynchronous-reply", { name: "MAIN-DOC", value: mainDoc });
+
+						pageLoading(TARGET_URL, event);
+					}
+				});
+			}
+			break;
+		case "UPDATE-WINDOW":
+			window.setSize(arg.value.width, arg.value.height);
+			break;
+		case "SEE-PAINT":
+			index = arg.index - 1;
+			logs = paintLogs[index].commandLog;
+			for (var i = 0; i < logs.length; i++) {
+				switch (logs[i].method) {
+					case "drawRect":
+					case "drawRRect":
+					case "drawImageRect":
+					case "drawTextBlob":
+					case "drawCircle":
+						event.reply("asynchronous-reply", { name: "SEE-PAINT", value: logs[i] });
+						break;
+					default:
+						break;
+				}
+			}
+			break;
+		default:
+			break;
+	}
 });
 
-function pageLoading(url) {
+async function pageLoading(url, event) {
 	paintLogs = [];
 	domSnapshots = [];
-
 	ongoing_paint = 0;
 	page_loaded = false;
 
 	puppeteer.launch().then(async browser => {
 		page = await browser.newPage();
-		console.log("Default viewport:", page.viewport());
+		await page.setViewport(VIEWPORT);
 
 		page.on("load", async () => {
 			page_loaded = true;
@@ -52,8 +101,7 @@ function pageLoading(url) {
 				await page.close();
 				await browser.close();
 
-				res = analysis();
-
+				clockSynchronization();
 				fs.unlinkSync(TRACE_PATH);
 				console.log("Tracing file removed.");
 			}
@@ -92,7 +140,6 @@ function pageLoading(url) {
 			}
 
 			ongoing_paint -= 1;
-			console.log("Ongoing paint number:", ongoing_paint);
 			if (page_loaded && ongoing_paint === 0) {
 				if (page) {
 					await page.tracing.stop();
@@ -100,8 +147,7 @@ function pageLoading(url) {
 				}
 				if (browser) await browser.close();
 
-				res = ananlysis();
-
+				clockSynchronization();
 				fs.unlinkSync(TRACE_PATH);
 				console.log("Tracing file removed.");
 			}
@@ -116,7 +162,7 @@ function pageLoading(url) {
 		await page.goto(url);
 	});
 
-	function ananlysis() {
+	function clockSynchronization() {
 		traceEvents = JSON.parse(fs.readFileSync(TRACE_PATH)).traceEvents;
 		NAVIGATION_START = traceEvents.find(d => d.name === "navigationStart").ts;
 
@@ -128,8 +174,11 @@ function pageLoading(url) {
 		paintLogs.forEach(d => d.ts -= BACKEND_START);
 		domSnapshots.forEach(d => d.ts -= BACKEND_START);
 
-		return { traceEvents, paintLogs, domSnapshots };
+		event.reply("asynchronous-reply", { name: "PAINT-REGION", value: VIEWPORT });
+		event.reply("asynchronous-reply", { name: "PAINT-COUNT", value: paintLogs.length });
 	}
+}
 
-	return res;
+function documentSimplication(originDoc) {
+
 }

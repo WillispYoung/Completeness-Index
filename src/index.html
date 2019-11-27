@@ -4,19 +4,132 @@
 <head>
 	<meta charset="UTF-8">
 	<title>Web Metric</title>
-	<script>
-		const { ipcRenderer } = require("electron");
-
-		function submit() {
-			url = document.getElementById('url').value;
-			ipcRenderer.send('asynchronous-message', { url: url });
+	<meta http-equiv="Content-Security-Policy" content="script-src 'self' 'unsafe-inline';" />
+	<style>
+		div {
+			margin: 5px;
 		}
-	</script>
+
+		select {
+			height: 22px;
+			margin-left: 50px;
+			margin-right: 5px;
+		}
+	</style>
 </head>
 
 <body>
-	<input type="button" value="GOTO" onclick="submit()" />
-	<input type="text" id="url">
+	<div id="metadata">
+		<input type="text" id="url">
+		<input type="button" value="GOTO" onclick="submit()">
+	</div>
+	<div id="content">
+		<div id="doc"></div>
+		<div id="paint_area">
+			<canvas id="paint"></canvas>
+		</div>
+	</div>
+	<div id="error" style="position: absolute; left: 10px; bottom: 10px; color: crimson;"></div>
+	<script>
+		const { ipcRenderer } = require("electron");
+
+		canvas = document.getElementById("paint");
+		context = canvas.getContext("2d");
+
+		ipcRenderer.on("asynchronous-reply", (event, arg) => {
+			switch (arg.name) {
+				case "PASS-URL":
+					if (arg.type && arg.type === "error") {
+						document.getElementById("error").innerHTML = arg.value;
+						document.getElementById("doc").innerText = "";
+					}
+					break;
+				case "MAIN-DOC":
+					document.getElementById("doc").innerText = arg.value;
+					break;
+				case "PAINT-REGION":
+					canvas = document.getElementById("paint");
+					canvas.width = arg.value.width + '';
+					canvas.height = arg.value.height + '';
+					canvas.style = "border: darkcyan 1px dashed;";
+					break;
+				case "PAINT-COUNT":
+					console.log(arg);
+					if (arg.value) {
+						var metadata = document.getElementById("metadata");
+
+						var selectNode = document.createElement("select");
+						selectNode.id = "paint_index";
+						for (var i = 0; i < arg.value; i++) {
+							var option = document.createElement('option');
+							option.text = i + 1;
+							option.value = i + 1;
+							selectNode.add(option);
+						}
+						metadata.appendChild(selectNode);
+
+						var inputNode = document.createElement("input");
+						inputNode.type = "button";
+						inputNode.value = "SEE PAINT";
+						inputNode.onclick = seePaint;
+						metadata.appendChild(inputNode);
+					}
+					break;
+				case "SEE-PAINT":
+					command = arg.value;
+					switch (command.method) {
+						case "drawRect":
+							context.fillStyle = command.params.paint.color;
+							context.fillRect(
+								command.params.rect.left, 
+								command.params.rect.top,
+								command.params.rect.right - command.params.rect.left,
+								command.params.rect.bottom - command.params.rect.top
+							);
+							break;
+						case "drawRRect":
+
+							break;
+						case "drawImageRect":
+							break;
+						case "drawTextBlob":
+							break;
+						default:
+							break;
+					}
+					break;
+				default:
+					break;
+			}
+		});
+
+		function submit() {
+			url = document.getElementById('url').value;
+			ipcRenderer.send('asynchronous-message', { name: "PASS-URL", url: url });
+		}
+
+		function seePaint() {
+			paintIndex = parseInt(document.getElementById("paint_index").value);
+			ipcRenderer.send('asynchronous-message', { name: "SEE-PAINT", index: paintIndex });
+		}
+
+		function updateWindow() {
+			// DOES NOT WORK!
+			ipcRenderer.send('asynchronous-message', {
+				name: "UPDATE-WINDOW",
+				value: {
+					width: Math.max(
+						document.body.scrollWidth, document.documentElement.scrollWidth,
+						document.body.offsetWidth, document.documentElement.offsetWidth,
+						document.body.clientWidth, document.documentElement.clientWidth),
+					height: Math.max(
+						document.body.scrollHeight, document.documentElement.scrollHeight,
+						document.body.offsetHeight, document.documentElement.offsetHeight,
+						document.body.clientHeight, document.documentElement.clientHeight)
+				}
+			});
+		}
+	</script>
 </body>
 
 </html>

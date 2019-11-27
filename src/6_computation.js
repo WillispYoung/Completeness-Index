@@ -14,6 +14,23 @@ function loadPage() {
     paintLogs = [];
     domSnapshots = [];
 
+    function ananlysis() {
+        traceEvents = JSON.parse(fs.readFileSync(TRACE_PATH)).traceEvents;
+        NAVIGATION_START = traceEvents.find(d => d.name === "navigationStart").ts;
+
+        traceEvents.forEach(d => {
+            d.ts = (d.ts - NAVIGATION_START) / 1000;
+            if (d.dur) d.dur /= 1000;
+        });
+
+        paintLogs.forEach(d => d.ts -= BACKEND_START);
+        domSnapshots.forEach(d => d.ts -= BACKEND_START);
+
+        // return {traceEvents, paintLogs, domSnapshots};
+
+        fs.writeFileSync("output/paint-logs.json", JSON.stringify(paintLogs));
+    }
+
     ongoing_paint = 0;
     page_loaded = false;
 
@@ -30,7 +47,7 @@ function loadPage() {
                 await page.close();
                 await browser.close();
 
-                res = analysis();
+                analysis();
 
                 fs.unlinkSync(TRACE_PATH);
                 console.log("Tracing file removed.");
@@ -93,21 +110,6 @@ function loadPage() {
         BACKEND_START = Date.now();
         await page.goto(TARGET_URL);
     });
-
-    function ananlysis() {
-        traceEvents = JSON.parse(fs.readFileSync(TRACE_PATH)).traceEvents;
-        NAVIGATION_START = traceEvents.find(d => d.name === "navigationStart").ts;
-
-        traceEvents.forEach(d => {
-            d.ts = (d.ts - NAVIGATION_START) / 1000;
-            if (d.dur) d.dur /= 1000;
-        });
-
-        paintLogs.forEach(d => d.ts -= BACKEND_START);
-        domSnapshots.forEach(d => d.ts -= BACKEND_START);
-
-        return {traceEvents, paintLogs, domSnapshots};
-    }
-
-    return res;
 }
+
+loadPage();
