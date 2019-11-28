@@ -8,7 +8,7 @@ function loadPage() {
         'devtools.timeline',
         'disabled-by-default-devtools.timeline',
     ]
-    const TARGET_URL = "https://www.baidu.com";
+    const TARGET_URL = "https://www.qq.com";
     let BACKEND_START, NAVIGATION_START, res;
 
     paintLogs = [];
@@ -26,7 +26,7 @@ function loadPage() {
         paintLogs.forEach(d => d.ts -= BACKEND_START);
         domSnapshots.forEach(d => d.ts -= BACKEND_START);
 
-        fs.writeFileSync("output/paint-logs.json", JSON.stringify(paintLogs));
+        fs.writeFileSync("output/paint-logs-long.json", JSON.stringify(paintLogs));
     }
 
     ongoing_paint = 0;

@@ -9,6 +9,7 @@
 		div {
 			margin: 5px;
 		}
+
 		select {
 			height: 22px;
 			margin-left: 50px;
@@ -82,19 +83,25 @@
 						case "drawRect":
 							context.fillStyle = command.params.paint.color;
 							context.fillRect(
-								command.params.rect.left, 
+								command.params.rect.left,
 								command.params.rect.top,
 								command.params.rect.right - command.params.rect.left,
 								command.params.rect.bottom - command.params.rect.top
 							);
 							break;
 						case "drawRRect":
-
+							context.fillStyle = command.params.paint.color;
+							context.fillRect(
+								command.params.rrect.left,
+								command.params.rrect.top,
+								command.params.rrect.right - command.params.rrect.left,
+								command.params.rrect.bottom - command.params.rrect.top
+							);
 							break;
 						case "drawImageRect":
 							context.fillStyle = command.params.paint.color;
 							context.fillRect(
-								command.params.dst.left, 
+								command.params.dst.left,
 								command.params.dst.top,
 								command.params.dst.right - command.params.dst.left,
 								command.params.dst.bottom - command.params.dst.top
