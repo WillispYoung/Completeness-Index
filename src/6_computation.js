@@ -14,7 +14,7 @@ function loadPage() {
     paintLogs = [];
     domSnapshots = [];
 
-    function ananlysis() {
+    function analysis() {
         traceEvents = JSON.parse(fs.readFileSync(TRACE_PATH)).traceEvents;
         NAVIGATION_START = traceEvents.find(d => d.name === "navigationStart").ts;
 
@@ -25,8 +25,6 @@ function loadPage() {
 
         paintLogs.forEach(d => d.ts -= BACKEND_START);
         domSnapshots.forEach(d => d.ts -= BACKEND_START);
-
-        // return {traceEvents, paintLogs, domSnapshots};
 
         fs.writeFileSync("output/paint-logs.json", JSON.stringify(paintLogs));
     }

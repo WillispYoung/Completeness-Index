@@ -9,7 +9,6 @@
 		div {
 			margin: 5px;
 		}
-
 		select {
 			height: 22px;
 			margin-left: 50px;
@@ -30,6 +29,7 @@
 		</div>
 	</div>
 	<div id="error" style="position: absolute; left: 10px; bottom: 10px; color: crimson;"></div>
+	<!-- <script src=""></script> -->
 	<script>
 		const { ipcRenderer } = require("electron");
 
@@ -76,6 +76,7 @@
 					}
 					break;
 				case "SEE-PAINT":
+					// BETTER USE D3.JS!
 					command = arg.value;
 					switch (command.method) {
 						case "drawRect":
@@ -91,8 +92,17 @@
 
 							break;
 						case "drawImageRect":
+							context.fillStyle = command.params.paint.color;
+							context.fillRect(
+								command.params.dst.left, 
+								command.params.dst.top,
+								command.params.dst.right - command.params.dst.left,
+								command.params.dst.bottom - command.params.dst.top
+							);
 							break;
 						case "drawTextBlob":
+							context.fillStyle = "black";
+							context.fillText("Text", command.params.x, command.params.y);
 							break;
 						default:
 							break;
@@ -109,12 +119,14 @@
 		}
 
 		function seePaint() {
+			document.getElementById("error").innerHTML = "";
+			context.clearRect(0, 0, canvas.width, canvas.height);
 			paintIndex = parseInt(document.getElementById("paint_index").value);
 			ipcRenderer.send('asynchronous-message', { name: "SEE-PAINT", index: paintIndex });
 		}
 
 		function updateWindow() {
-			// DOES NOT WORK!
+			// DOES NOT WORK! WHY?
 			ipcRenderer.send('asynchronous-message', {
 				name: "UPDATE-WINDOW",
 				value: {

@@ -1,11 +1,12 @@
 const { app, ipcMain, ipcRenderer, BrowserWindow } = require('electron');
 const puppeteer = require("puppeteer");
+const EventEmitter = require("events");
 const cleaner = require("clean-html");
 const request = require("request");
 const fs = require("fs");
 
 const WINDOW_SIZE = { width: 800, height: 600 };
-const VIEWPORT = { width: 800, height: 600 };
+const VIEWPORT = { width: 1200, height: 800 };
 const TRACE_CATEGORIES = [
 	'blink.user_timing',
 	'devtools.timeline',
@@ -61,8 +62,10 @@ ipcMain.on("asynchronous-message", (event, arg) => {
 			window.setSize(arg.value.width, arg.value.height);
 			break;
 		case "SEE-PAINT":
+			// console.log(paintLogs);
 			index = arg.index - 1;
 			logs = paintLogs[index].commandLog;
+			if (!logs) return;
 			for (var i = 0; i < logs.length; i++) {
 				switch (logs[i].method) {
 					case "drawRect":
@@ -82,11 +85,67 @@ ipcMain.on("asynchronous-message", (event, arg) => {
 	}
 });
 
+function documentSimplication(originDoc) {
+	return originDoc;
+}
+
 async function pageLoading(url, event) {
-	paintLogs = [];
 	domSnapshots = [];
+	paintLogs = [];
+	ongoing_dom = 0;
 	ongoing_paint = 0;
 	page_loaded = false;
+
+	emitter = new EventEmitter();
+
+	emitter.on("dom", async arg => {
+		ongoing_dom += 1;
+		try {
+			start = Date.now();
+			dom = await arg.client.send("DOMSnapshot.captureSnapshot", {
+				computedStyles: ["top", "left", "width", "height"],
+				includePaintOrder: true,
+				includeDOMRects: true
+			});
+			dom.ts = start;
+			domSnapshots.push(dom);
+
+			end = Date.now();
+			console.log("DOM snapshot takes", end - start, "ms.");
+		}
+		catch (e) {
+			console.log(e.message);
+			domSnapshots.push({});
+		}
+
+		ongoing_dom -= 1;
+		if (page_loaded && ongoing_paint === 0 && ongoing_dom === 0) {
+			await closePageAndBrowser(arg.page, arg.browser);
+		}
+	});
+
+	emitter.on("paint", async arg => {
+		ongoing_paint += 1;
+		try {
+			start = Date.now();
+			layer = await arg.client.send("LayerTree.makeSnapshot", { layerId: arg.params.layerId });
+			cLogs = await arg.client.send("LayerTree.snapshotCommandLog", { snapshotId: layer.snapshotId });
+			cLogs.ts = start;
+			paintLogs.push(cLogs);
+
+			end = Date.now();
+			console.log("Paint logs take", end - start, "ms.");
+		}
+		catch (e) {
+			console.log(e.message);
+			paintLogs.push({});
+		}
+
+		ongoing_paint -= 1;
+		if (page_loaded && ongoing_paint === 0 && ongoing_dom === 0) {
+			await closePageAndBrowser(arg.page, arg.browser);
+		}
+	});
 
 	puppeteer.launch().then(async browser => {
 		page = await browser.newPage();
@@ -96,14 +155,8 @@ async function pageLoading(url, event) {
 			page_loaded = true;
 			console.log("Page loaded.");
 
-			if (ongoing_paint === 0) {
-				await page.tracing.stop();
-				await page.close();
-				await browser.close();
-
-				clockSynchronization();
-				fs.unlinkSync(TRACE_PATH);
-				console.log("Tracing file removed.");
+			if (page_loaded && ongoing_paint === 0 && ongoing_dom === 0) {
+				await closePageAndBrowser(page, browser);
 			}
 		});
 
@@ -115,42 +168,8 @@ async function pageLoading(url, event) {
 		client.on("LayerTree.layerPainted", async params => {
 			if (page_loaded) return;
 
-			ongoing_paint += 1;
-			try {
-				start = Date.now();
-				dom = await client.send("DOMSnapshot.captureSnapshot", {
-					computedStyles: ["top", "left", "width", "height"],
-					includePaintOrder: true,
-					includeDOMRects: true
-				});
-				dom.ts = start;
-				domSnapshots.push(dom);
-
-				start_ = Date.now();
-				layer = await client.send("LayerTree.makeSnapshot", { layerId: params.layerId });
-				cLogs = await client.send("LayerTree.snapshotCommandLog", { snapshotId: layer.snapshotId });
-				cLogs.ts = start_;
-				paintLogs.push(cLogs);
-
-				end = Date.now();
-				console.log("Paint event takes", end - start, "ms to process.");
-			}
-			catch (e) {
-
-			}
-
-			ongoing_paint -= 1;
-			if (page_loaded && ongoing_paint === 0) {
-				if (page) {
-					await page.tracing.stop();
-					await page.close();
-				}
-				if (browser) await browser.close();
-
-				clockSynchronization();
-				fs.unlinkSync(TRACE_PATH);
-				console.log("Tracing file removed.");
-			}
+			emitter.emit("dom", { client, page, browser });
+			emitter.emit("paint", { params, client, page, browser });
 		});
 
 		await page.tracing.start({
@@ -161,6 +180,17 @@ async function pageLoading(url, event) {
 		BACKEND_START = Date.now();
 		await page.goto(url);
 	});
+
+	async function closePageAndBrowser(page, browser) {
+		if (page) {
+			await page.tracing.stop();
+			await page.close();
+		}
+		if (browser) {
+			await browser.close();
+		}
+		clockSynchronization();
+	}
 
 	function clockSynchronization() {
 		traceEvents = JSON.parse(fs.readFileSync(TRACE_PATH)).traceEvents;
@@ -176,9 +206,8 @@ async function pageLoading(url, event) {
 
 		event.reply("asynchronous-reply", { name: "PAINT-REGION", value: VIEWPORT });
 		event.reply("asynchronous-reply", { name: "PAINT-COUNT", value: paintLogs.length });
+
+		fs.unlinkSync(TRACE_PATH);
+		console.log("Trace file removed.");
 	}
-}
-
-function documentSimplication(originDoc) {
-
 }
