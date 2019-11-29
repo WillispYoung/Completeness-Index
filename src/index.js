@@ -3,6 +3,7 @@ const puppeteer = require("puppeteer");
 const EventEmitter = require("events");
 const cleaner = require("clean-html");
 const request = require("request");
+const utf8 = require("utf8");
 const fs = require("fs");
 
 const WINDOW_SIZE = { width: 800, height: 600 };
@@ -66,14 +67,42 @@ ipcMain.on("asynchronous-message", (event, arg) => {
 			index = arg.index - 1;
 			logs = paintLogs[index].commandLog;
 			if (!logs) return;
+
+			strRef = domSnapshots[index].strings;
+			layout = domSnapshots[index].documents[0].layout;
+
+			validTextIndex = [];
+			for (var j = 0; j < layout.text.length; j++) {
+				if (layout.text[j] !== -1) {
+					validTextIndex.push(j);
+				}
+			}
+	
 			for (var i = 0; i < logs.length; i++) {
 				switch (logs[i].method) {
 					case "drawRect":
 					case "drawRRect":
 					case "drawImageRect":
-					case "drawTextBlob":
 					case "drawCircle":
 						event.reply("asynchronous-reply", { name: "SEE-PAINT", value: logs[i] });
+						break;
+					case "drawTextBlob":
+						x = logs[i].params.x;
+						y = logs[i].params.y;
+
+						minDistance = Number.MAX_SAFE_INTEGER;
+						targetIndex = 0;
+						validTextIndex.forEach(d => {
+							distance = Math.hypot(x - layout.bounds[d][0], y - layout.bounds[d][1]);
+							if (distance < minDistance) {
+								minDistance = distance;
+								targetIndex = d;
+							}
+						});
+						
+						if (layout.text[targetIndex] !== -1) {
+							event.reply("asynchronous-reply", { name: "SEE-PAINT", value: logs[i], content: strRef[layout.text[targetIndex]] });
+						}
 						break;
 					default:
 						break;
@@ -115,7 +144,7 @@ async function pageLoading(url, event) {
 		}
 		catch (e) {
 			console.log(e.message);
-			domSnapshots.push({});
+			domSnapshots.push({ ts: Date.now() });
 		}
 
 		ongoing_dom -= 1;
@@ -138,7 +167,7 @@ async function pageLoading(url, event) {
 		}
 		catch (e) {
 			console.log(e.message);
-			paintLogs.push({});
+			paintLogs.push({ ts: Date.now() });
 		}
 
 		ongoing_paint -= 1;
@@ -202,12 +231,16 @@ async function pageLoading(url, event) {
 		});
 
 		paintLogs.forEach(d => d.ts -= BACKEND_START);
+		paintLogs.sort((a, b) => { a.ts - b.ts });
 		domSnapshots.forEach(d => d.ts -= BACKEND_START);
+		domSnapshots.sort((a, b) => (a.ts - b.ts));
 
 		event.reply("asynchronous-reply", { name: "PAINT-REGION", value: VIEWPORT });
 		event.reply("asynchronous-reply", { name: "PAINT-COUNT", value: paintLogs.length });
 
 		fs.unlinkSync(TRACE_PATH);
 		console.log("Trace file removed.");
+
+		// domSnapshots.forEach(d => console.log(d.documents.length));
 	}
 }

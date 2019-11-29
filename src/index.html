@@ -36,6 +36,7 @@
 
 		canvas = document.getElementById("paint");
 		context = canvas.getContext("2d");
+		context.setLineDash([3, 1]);
 
 		ipcRenderer.on("asynchronous-reply", (event, arg) => {
 			switch (arg.name) {
@@ -55,7 +56,6 @@
 					canvas.style = "border: darkcyan 1px dashed;";
 					break;
 				case "PAINT-COUNT":
-					console.log(arg);
 					if (arg.value) {
 						var metadata = document.getElementById("metadata");
 
@@ -77,12 +77,19 @@
 					}
 					break;
 				case "SEE-PAINT":
-					// BETTER USE D3.JS!
+					// SKIA COLOR IS ARGB.
 					command = arg.value;
 					switch (command.method) {
 						case "drawRect":
-							context.fillStyle = command.params.paint.color;
-							context.fillRect(
+							// context.strokeStyle = '#' + command.params.paint.color.slice(3);
+							context.strokeStyle = "#FF0000";
+							// context.fillRect(
+							// 	command.params.rect.left + 1,
+							// 	command.params.rect.top + 1,
+							// 	command.params.rect.right - command.params.rect.left - 2,
+							// 	command.params.rect.bottom - command.params.rect.top - 2
+							// );
+							context.strokeRect(
 								command.params.rect.left,
 								command.params.rect.top,
 								command.params.rect.right - command.params.rect.left,
@@ -90,17 +97,31 @@
 							);
 							break;
 						case "drawRRect":
-							context.fillStyle = command.params.paint.color;
-							context.fillRect(
-								command.params.rrect.left,
-								command.params.rrect.top,
-								command.params.rrect.right - command.params.rrect.left,
-								command.params.rrect.bottom - command.params.rrect.top
+							// context.strokeStyle = '#' + command.params.paint.color.slice(3);
+							context.strokeStyle = "#00FF00";
+							// context.fillRect(
+							// 	command.params.rrect.left + 1, 
+							// 	command.params.rrect.top + 1,
+							// 	command.params.rrect.right - command.params.rrect.left - 2,
+							// 	command.params.rrect.bottom - command.params.rrect.top - 2
+							// );
+							context.strokeRect(
+								command.params.rrect.left + 1,
+								command.params.rrect.top + 1,
+								command.params.rrect.right - command.params.rrect.left - 2,
+								command.params.rrect.bottom - command.params.rrect.top - 2
 							);
 							break;
 						case "drawImageRect":
-							context.fillStyle = command.params.paint.color;
-							context.fillRect(
+							// context.strokeStyle = '#' + command.params.paint.color.slice(3);
+							context.strokeStyle = "#0000FF";
+							// context.fillRect(
+							// 	command.params.dst.left,
+							// 	command.params.dst.top,
+							// 	command.params.dst.right - command.params.dst.left,
+							// 	command.params.dst.bottom - command.params.dst.top
+							// );
+							context.strokeRect(
 								command.params.dst.left,
 								command.params.dst.top,
 								command.params.dst.right - command.params.dst.left,
@@ -108,8 +129,9 @@
 							);
 							break;
 						case "drawTextBlob":
-							context.fillStyle = "black";
-							context.fillText("Text", command.params.x, command.params.y);
+							// console.log(arg.content);
+							context.fillStyle = '#' + command.params.paint.color.slice(3);
+							context.fillText(arg.content, command.params.x, command.params.y);
 							break;
 						default:
 							break;

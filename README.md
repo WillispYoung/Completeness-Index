@@ -37,7 +37,11 @@ As snapshots can only be captured at Backend, we only monitor Event (3), and acc
 
 #### Computation
 
-* Paint Events of Interest
+With each paint event triggered, we can capture a sequence of paint commands. Each paint command of interest can be translated into an update to the viewport. Yet there can be many repeated paint commands that produce identical updates, we treat them as **Redundant Paint**. Only those that make the viewport "different" should be treated as **Effective Paint**.
+
+It's obvious that most paint commands are redundant, especially those that are caused by animaiton.
+
+* Paint Commands of Interest
 
     1. drawRect
     2. drawImageRect
