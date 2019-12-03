@@ -3,7 +3,6 @@ const puppeteer = require("puppeteer");
 const EventEmitter = require("events");
 const cleaner = require("clean-html");
 const request = require("request");
-const utf8 = require("utf8");
 const fs = require("fs");
 
 const WINDOW_SIZE = { width: 800, height: 600 };
@@ -17,7 +16,7 @@ const TRACE_PATH = `src/output/trace_${Date.now()}.json`;
 
 let TARGET_URL, BACKEND_START, NAVIGATION_START;
 let mainDoc, paintLogs, domSnapshots, traceEvents;
-
+let validPaintArea;
 let window;
 
 app.on('ready', () => {
@@ -30,7 +29,6 @@ app.on('ready', () => {
 	});
 
 	window.loadFile('src/index.html');
-	// window.webContents.openDevTools();
 });
 
 ipcMain.on("asynchronous-message", (event, arg) => {
@@ -63,7 +61,6 @@ ipcMain.on("asynchronous-message", (event, arg) => {
 			window.setSize(arg.value.width, arg.value.height);
 			break;
 		case "SEE-PAINT":
-			// console.log(paintLogs);
 			index = arg.index - 1;
 			logs = paintLogs[index].commandLog;
 			if (!logs) return;
@@ -77,7 +74,7 @@ ipcMain.on("asynchronous-message", (event, arg) => {
 					validTextIndex.push(j);
 				}
 			}
-	
+
 			for (var i = 0; i < logs.length; i++) {
 				switch (logs[i].method) {
 					case "drawRect":
@@ -99,7 +96,7 @@ ipcMain.on("asynchronous-message", (event, arg) => {
 								targetIndex = d;
 							}
 						});
-						
+
 						if (layout.text[targetIndex] !== -1) {
 							event.reply("asynchronous-reply", { name: "SEE-PAINT", value: logs[i], content: strRef[layout.text[targetIndex]] });
 						}
@@ -108,6 +105,12 @@ ipcMain.on("asynchronous-message", (event, arg) => {
 						break;
 				}
 			}
+			break;
+		case "SEE-PAINT-AREA":
+			index = arg.index - 1;
+			validPaintArea[index].forEach(d => {
+				event.reply("asynchronous-reply", { name: "SEE-PAINT-AREA", value: d });
+			});
 			break;
 		default:
 			break;
@@ -132,7 +135,7 @@ async function pageLoading(url, event) {
 		try {
 			start = Date.now();
 			dom = await arg.client.send("DOMSnapshot.captureSnapshot", {
-				computedStyles: ["top", "left", "width", "height"],
+				computedStyles: ["font-size", "opacity", "z-index"],
 				includePaintOrder: true,
 				includeDOMRects: true
 			});
@@ -241,6 +244,69 @@ async function pageLoading(url, event) {
 		fs.unlinkSync(TRACE_PATH);
 		console.log("Trace file removed.");
 
-		// domSnapshots.forEach(d => console.log(d.documents.length));
+		validPaintArea = [];
+		for (var i = 0; i < paintLogs.length; i++) {
+			validPaintArea.push([]);
+
+			strRef = domSnapshots[i].strings;
+			layout = domSnapshots[i].documents[0].layout;
+
+			validTextIndex = [];
+			for (var j = 0; j < layout.text.length; j++) {
+				if (layout.text[j] !== -1) {
+					validTextIndex.push(j);
+				}
+			}
+
+			paintLogs[i].commandLog.forEach(d => {
+				let rect;
+				switch (d.method) {
+					case "drawRect":
+						rect = d.params.rect;
+						rect.type = "rect";
+						break;
+					case "drawRRect":
+						rect = d.params.rrect;
+						rect.type = "rrect";
+						break;
+					case "drawImageRect":
+						rect = d.params.dst;
+						rect.type = "image";
+						break;
+					case "drawTextBlob":
+						x = d.params.x;
+						y = d.params.y;
+
+						minDistance = Number.MAX_SAFE_INTEGER;
+						targetIndex = 0;
+						validTextIndex.forEach(z => {
+							distance = Math.hypot(x - layout.bounds[z][0], y - layout.bounds[z][1]);
+							if (distance < minDistance) {
+								minDistance = distance;
+								targetIndex = z;
+							}
+						});
+
+						if (layout.text[targetIndex] !== -1) {
+							rect = {
+								left: layout.bounds[targetIndex][0],
+								top: layout.bounds[targetIndex][1],
+								right: layout.bounds[targetIndex][0] + layout.bounds[targetIndex][2],
+								bottom: layout.bounds[targetIndex][1] + layout.bounds[targetIndex][3],
+								type: "text",
+								value: strRef[layout.text[targetIndex]]
+							};
+						}
+						break;
+					default:
+						break;
+				}
+				if (rect) {
+					validPaintArea[i].push(rect);
+				}
+			});
+		}
+
+		console.log("Valid paint areas computed.");
 	}
 }

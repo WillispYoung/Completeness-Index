@@ -6,14 +6,18 @@
 	<title>Web Metric</title>
 	<meta http-equiv="Content-Security-Policy" content="script-src 'self' 'unsafe-inline';" />
 	<style>
-		div {
-			margin: 5px;
-		}
-
 		select {
 			height: 22px;
 			margin-left: 50px;
-			margin-right: 5px;
+		}
+
+		#see_paint,
+		#see_paint_area {
+			margin-left: 10px;
+		}
+
+		#content {
+			margin-top: 10px;
 		}
 	</style>
 </head>
@@ -29,14 +33,13 @@
 			<canvas id="paint"></canvas>
 		</div>
 	</div>
-	<div id="error" style="position: absolute; left: 10px; bottom: 10px; color: crimson;"></div>
-	<!-- <script src=""></script> -->
+	<div id="error" style="position: absolute; left: 10px; bottom: 10px; color: crimson; font-size: 12px;"></div>
 	<script>
 		const { ipcRenderer } = require("electron");
 
 		canvas = document.getElementById("paint");
 		context = canvas.getContext("2d");
-		context.setLineDash([3, 1]);
+		context.lineWidth = 1;
 
 		ipcRenderer.on("asynchronous-reply", (event, arg) => {
 			switch (arg.name) {
@@ -53,12 +56,24 @@
 					canvas = document.getElementById("paint");
 					canvas.width = arg.value.width + '';
 					canvas.height = arg.value.height + '';
-					canvas.style = "border: darkcyan 1px dashed;";
+					canvas.style = "border: darkcyan 1px dashed; padding: 10px";
 					break;
 				case "PAINT-COUNT":
-					if (arg.value) {
+					if ((selectNode = document.getElementById("paint_index"))) {
+						while (selectNode.length) {
+							selectNode.remove(0);
+						}
+						if (arg.value) {
+							for (var i = 0; i < arg.value; i++) {
+								var option = document.createElement('option');
+								option.text = i + 1;
+								option.value = i + 1;
+								selectNode.add(option);
+							}
+						}
+					}
+					else if (arg.value) {
 						var metadata = document.getElementById("metadata");
-
 						var selectNode = document.createElement("select");
 						selectNode.id = "paint_index";
 						for (var i = 0; i < arg.value; i++) {
@@ -71,9 +86,17 @@
 
 						var inputNode = document.createElement("input");
 						inputNode.type = "button";
+						inputNode.id = "see_paint";
 						inputNode.value = "SEE PAINT";
 						inputNode.onclick = seePaint;
 						metadata.appendChild(inputNode);
+
+						var inputNode_ = document.createElement("input");
+						inputNode_.type = "button";
+						inputNode_.id = "see_paint_area";
+						inputNode_.value = "SEE PAINT AREA";
+						inputNode_.onclick = seePaintArea;
+						metadata.appendChild(inputNode_);
 					}
 					break;
 				case "SEE-PAINT":
@@ -81,15 +104,8 @@
 					command = arg.value;
 					switch (command.method) {
 						case "drawRect":
-							// context.strokeStyle = '#' + command.params.paint.color.slice(3);
-							context.strokeStyle = "#FF0000";
-							// context.fillRect(
-							// 	command.params.rect.left + 1,
-							// 	command.params.rect.top + 1,
-							// 	command.params.rect.right - command.params.rect.left - 2,
-							// 	command.params.rect.bottom - command.params.rect.top - 2
-							// );
-							context.strokeRect(
+							context.fillStyle = '#' + command.params.paint.color.slice(3);
+							context.fillRect(
 								command.params.rect.left,
 								command.params.rect.top,
 								command.params.rect.right - command.params.rect.left,
@@ -97,45 +113,52 @@
 							);
 							break;
 						case "drawRRect":
-							// context.strokeStyle = '#' + command.params.paint.color.slice(3);
-							context.strokeStyle = "#00FF00";
-							// context.fillRect(
-							// 	command.params.rrect.left + 1, 
-							// 	command.params.rrect.top + 1,
-							// 	command.params.rrect.right - command.params.rrect.left - 2,
-							// 	command.params.rrect.bottom - command.params.rrect.top - 2
-							// );
-							context.strokeRect(
-								command.params.rrect.left + 1,
-								command.params.rrect.top + 1,
-								command.params.rrect.right - command.params.rrect.left - 2,
-								command.params.rrect.bottom - command.params.rrect.top - 2
+							context.fillStyle = '#' + command.params.paint.color.slice(3);
+							context.fillRect(
+								command.params.rrect.left,
+								command.params.rrect.top,
+								command.params.rrect.right - command.params.rrect.left,
+								command.params.rrect.bottom - command.params.rrect.top
 							);
 							break;
 						case "drawImageRect":
-							// context.strokeStyle = '#' + command.params.paint.color.slice(3);
-							context.strokeStyle = "#0000FF";
-							// context.fillRect(
-							// 	command.params.dst.left,
-							// 	command.params.dst.top,
-							// 	command.params.dst.right - command.params.dst.left,
-							// 	command.params.dst.bottom - command.params.dst.top
-							// );
-							context.strokeRect(
+							context.fillStyle = '#' + command.params.paint.color.slice(3);
+							context.fillRect(
 								command.params.dst.left,
 								command.params.dst.top,
 								command.params.dst.right - command.params.dst.left,
 								command.params.dst.bottom - command.params.dst.top
 							);
-							break;
 						case "drawTextBlob":
-							// console.log(arg.content);
 							context.fillStyle = '#' + command.params.paint.color.slice(3);
 							context.fillText(arg.content, command.params.x, command.params.y);
 							break;
 						default:
 							break;
 					}
+					break;
+				case "SEE-PAINT-AREA":
+					rect = arg.value;
+					switch (rect.type) {
+						case "rect":
+							context.strokeStyle = "#FF0000";
+							break;
+						case "rrect":
+							context.strokeStyle = "#00FF00";
+							break;
+						case "image":
+							context.strokeStyle = "#0000FF";
+							break;
+						case "text":
+							context.strokeStyle = "#00AAFF";
+							break;
+						default:
+							break;
+					}
+					context.strokeRect(rect.left, rect.top, rect.right - rect.left, rect.bottom - rect.top);
+					break;
+				case "TEST":
+					console.log(arg.value);
 					break;
 				default:
 					break;
@@ -152,6 +175,13 @@
 			context.clearRect(0, 0, canvas.width, canvas.height);
 			paintIndex = parseInt(document.getElementById("paint_index").value);
 			ipcRenderer.send('asynchronous-message', { name: "SEE-PAINT", index: paintIndex });
+		}
+
+		function seePaintArea() {
+			document.getElementById("error").innerHTML = "";
+			context.clearRect(0, 0, canvas.width, canvas.height);
+			paintIndex = parseInt(document.getElementById("paint_index").value);
+			ipcRenderer.send('asynchronous-message', { name: "SEE-PAINT-AREA", index: paintIndex });
 		}
 
 		function updateWindow() {

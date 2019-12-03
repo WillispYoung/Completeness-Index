@@ -61,8 +61,7 @@ typings/
 .next
 
 # Chrome trace files
-trace*.json
-category*.json
+src/output/*.json
 
 # VS Code Config
 .vscode/
