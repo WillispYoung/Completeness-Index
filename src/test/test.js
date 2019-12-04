@@ -1,7 +1,15 @@
-x = [{t: 1}, {t: 2}]
+const fs = require("fs");
 
-x.forEach(d => {
-    d.t ++;
+logs = JSON.parse(fs.readFileSync("../output/paint-logs.json"))
+
+// console.log(logs);
+styles = { "Fill": 0, "Stroke": 0 };
+logs.forEach(d => {
+    d.commandLog.forEach(x => {
+        if (x.params && x.params.paint) {
+            styles[x.params.paint.styleName] += 1;
+        }
+    });
 });
 
-console.log(x);
+console.log(styles);

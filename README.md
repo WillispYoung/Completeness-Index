@@ -40,25 +40,34 @@ As snapshots can only be captured at Backend, we only monitor Event (3), and acc
 With each paint event triggered, we can capture a sequence of paint commands. Each paint command of interest can be translated into an update to the viewport. Yet there can be many repeated paint commands that produce identical updates, we treat them as **Redundant Paint**. Only those that make the viewport "different" should be treated as **Effective Paint**.
 
 * Paint Commands of Interest
-
     1. drawRect
     2. drawImageRect
     3. drawTextBlob
     4. drawRRect
     5. drawCircle and etc.
 
+* Parameters in Paint: Command Logs
+    1. stokeMiter: determining how to paint the turning corner of a line (or called stroke join). See https://developer.mozilla.org/en-US/docs/Web/SVG/Attribute/stroke-miterlimit.
+    2. strokeCap: determining how to paint both end of a line. See https://developer.mozilla.org/en-US/docs/Web/SVG/Attribute/stroke-linecap.
+
 #### In-Paint Overlap VS. Cross-Paint Overlap
 
-Take https://www.baidu.com as an example, loading this page triggered paint events as follows once:
+Take https://www.baidu.com as an example, once loading this page triggered paint events as follows:
 
-| Index | Paint Area | In-Paint Overlap | Cross-Paint Overlap |
-| --- | --- | --- | --- |
-| 0 | 1021229 | 40191 (3.9%) | - |
-| 1 | 1056112 | 75074 (7.1%) | 1021229 (96.7%) |
-| 2 | 1067824 | 86786 (8.1%) | 1056112 (98.9%) |
-| 3 | 1067824 | 86786 (8.1%) | 1067824 (100%) |
-| 4 | 1067824 | 86786 (8.1%) | 1067824 (100%) |
-| 5 | 1068112 | 87074 (8.2%) | 1067824 (99.9%) |
+| Index | Paint Area | In-Paint Overlap | Cross-Paint Overlap | Content Repetition |
+| --- | --- | --- | --- | --- |
+| 0 | 1021229 | 40191 (3.9%) | - | - |
+| 1 | 1056112 | 75074 (7.1%) | 1021229 (96.7%) | - |
+| 2 | 1067824 | 86786 (8.1%) | 1056112 (98.9%) | - |
+| 3 | 1067824 | 86786 (8.1%) | 1067824 (100%) | - |
+| 4 | 1067824 | 86786 (8.1%) | 1067824 (100%) | - |
+| 5 | 1068112 | 87074 (8.2%) | 1067824 (99.9%) | - |
+
+**In-Paint Overlap**: measures how well a page is structured and implemented. Overlap requires browser to invalidate layers and declare new composite layer to normalize rendering process.
+
+**Cross-Paint Overlap**: measures how much area is changed with one paint. Better combine *Content Repetition*.
+
+**Content Repetition**: measures how much area is *meaninglessly* changed with one paint. 
 
 ### Highlights
 

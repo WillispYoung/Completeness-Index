@@ -12,7 +12,7 @@
 		}
 
 		#see_paint,
-		#see_paint_area {
+		#see_paint_region {
 			margin-left: 10px;
 		}
 
@@ -25,35 +25,27 @@
 <body>
 	<div id="metadata">
 		<input type="text" id="url">
-		<input type="button" value="GOTO" onclick="submit()">
+		<input type="button" value="GOTO" onclick="passURL()">
 	</div>
 	<div id="content">
-		<div id="doc"></div>
-		<div id="paint_area">
-			<canvas id="paint"></canvas>
-		</div>
+		<canvas id="paint"></canvas>
 	</div>
 	<div id="error" style="position: absolute; left: 10px; bottom: 10px; color: crimson; font-size: 12px;"></div>
 	<script>
 		const { ipcRenderer } = require("electron");
+		const colors = { "rect": "#FF0000", "rrect": "#00FF00", "image": "#0000FF", "text": "#00AAFF" };
 
 		canvas = document.getElementById("paint");
 		context = canvas.getContext("2d");
-		context.lineWidth = 1;
 
 		ipcRenderer.on("asynchronous-reply", (event, arg) => {
 			switch (arg.name) {
 				case "PASS-URL":
 					if (arg.type && arg.type === "error") {
 						document.getElementById("error").innerHTML = arg.value;
-						document.getElementById("doc").innerText = "";
 					}
 					break;
-				case "MAIN-DOC":
-					document.getElementById("doc").innerText = arg.value;
-					break;
 				case "PAINT-REGION":
-					canvas = document.getElementById("paint");
 					canvas.width = arg.value.width + '';
 					canvas.height = arg.value.height + '';
 					canvas.style = "border: darkcyan 1px dashed; padding: 10px";
@@ -93,68 +85,39 @@
 
 						var inputNode_ = document.createElement("input");
 						inputNode_.type = "button";
-						inputNode_.id = "see_paint_area";
-						inputNode_.value = "SEE PAINT AREA";
-						inputNode_.onclick = seePaintArea;
+						inputNode_.id = "see_paint_region";
+						inputNode_.value = "SEE PAINT REGION";
+						inputNode_.onclick = seePaintRegion;
 						metadata.appendChild(inputNode_);
 					}
 					break;
 				case "SEE-PAINT":
-					// SKIA COLOR IS ARGB.
-					command = arg.value;
-					switch (command.method) {
-						case "drawRect":
-							context.fillStyle = '#' + command.params.paint.color.slice(3);
-							context.fillRect(
-								command.params.rect.left,
-								command.params.rect.top,
-								command.params.rect.right - command.params.rect.left,
-								command.params.rect.bottom - command.params.rect.top
-							);
+					region = arg.value;
+					switch (region.type) {
+						case "rect":
+						case "rrect":
+							if (region.style === "fill") {
+								fillRect(region.rect, region.color);
+							}
+							else if (region.style === "stroke") {
+								strokeRect(region.rect, region.color, region.lineWidth);
+							}
 							break;
-						case "drawRRect":
-							context.fillStyle = '#' + command.params.paint.color.slice(3);
-							context.fillRect(
-								command.params.rrect.left,
-								command.params.rrect.top,
-								command.params.rrect.right - command.params.rrect.left,
-								command.params.rrect.bottom - command.params.rrect.top
-							);
+						case "image":
+							fillRect(region.rect, region.color);
 							break;
-						case "drawImageRect":
-							context.fillStyle = '#' + command.params.paint.color.slice(3);
-							context.fillRect(
-								command.params.dst.left,
-								command.params.dst.top,
-								command.params.dst.right - command.params.dst.left,
-								command.params.dst.bottom - command.params.dst.top
-							);
-						case "drawTextBlob":
-							context.fillStyle = '#' + command.params.paint.color.slice(3);
-							context.fillText(arg.content, command.params.x, command.params.y);
+						case "text":
+							context.fillStyle = region.color;
+							context.fillText(region.text, region.point.x, region.point.y);
 							break;
 						default:
 							break;
 					}
 					break;
-				case "SEE-PAINT-AREA":
-					rect = arg.value;
-					switch (rect.type) {
-						case "rect":
-							context.strokeStyle = "#FF0000";
-							break;
-						case "rrect":
-							context.strokeStyle = "#00FF00";
-							break;
-						case "image":
-							context.strokeStyle = "#0000FF";
-							break;
-						case "text":
-							context.strokeStyle = "#00AAFF";
-							break;
-						default:
-							break;
-					}
+				case "SEE-PAINT-REGION":
+					rect = arg.value.rect;
+					context.lineWidth = 1;
+					context.strokeStyle = colors[arg.value.type];
 					context.strokeRect(rect.left, rect.top, rect.right - rect.left, rect.bottom - rect.top);
 					break;
 				case "TEST":
@@ -165,7 +128,18 @@
 			}
 		});
 
-		function submit() {
+		function fillRect(rect, color) {
+			context.fillStyle = color;
+			context.fillRect(rect.left, rect.top, rect.right - rect.left, rect.bottom - rect.top);
+		}
+
+		function strokeRect(rect, color, lineWidth) {
+			context.strokeStyle = color;
+			context.lineWidth = region.lineWidth;
+			context.strokeRect(rect.left, rect.top, rect.right - rect.left, rect.bottom - rect.top);
+		}
+
+		function passURL() {
 			url = document.getElementById('url').value;
 			ipcRenderer.send('asynchronous-message', { name: "PASS-URL", url: url });
 		}
@@ -177,28 +151,11 @@
 			ipcRenderer.send('asynchronous-message', { name: "SEE-PAINT", index: paintIndex });
 		}
 
-		function seePaintArea() {
+		function seePaintRegion() {
 			document.getElementById("error").innerHTML = "";
 			context.clearRect(0, 0, canvas.width, canvas.height);
 			paintIndex = parseInt(document.getElementById("paint_index").value);
-			ipcRenderer.send('asynchronous-message', { name: "SEE-PAINT-AREA", index: paintIndex });
-		}
-
-		function updateWindow() {
-			// DOES NOT WORK! WHY?
-			ipcRenderer.send('asynchronous-message', {
-				name: "UPDATE-WINDOW",
-				value: {
-					width: Math.max(
-						document.body.scrollWidth, document.documentElement.scrollWidth,
-						document.body.offsetWidth, document.documentElement.offsetWidth,
-						document.body.clientWidth, document.documentElement.clientWidth),
-					height: Math.max(
-						document.body.scrollHeight, document.documentElement.scrollHeight,
-						document.body.offsetHeight, document.documentElement.offsetHeight,
-						document.body.clientHeight, document.documentElement.clientHeight)
-				}
-			});
+			ipcRenderer.send('asynchronous-message', { name: "SEE-PAINT-REGION", index: paintIndex });
 		}
 	</script>
 </body>
