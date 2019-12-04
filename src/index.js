@@ -1,4 +1,5 @@
-const { app, ipcMain, ipcRenderer, BrowserWindow } = require('electron');
+const { app, ipcMain, BrowserWindow } = require('electron');
+const clonedeep = require("lodash.clonedeep");
 const puppeteer = require("puppeteer");
 const EventEmitter = require("events");
 const cleaner = require("clean-html");
@@ -16,7 +17,7 @@ const TRACE_PATH = `src/output/trace_${Date.now()}.json`;
 
 let TARGET_URL, BACKEND_START, NAVIGATION_START;
 let mainDoc, paintLogs, domSnapshots, traceEvents;
-let validPaintArea;
+let validPaintArea, pageContent;
 let window;
 
 app.on('ready', () => {
@@ -84,6 +85,7 @@ ipcMain.on("asynchronous-message", (event, arg) => {
 						event.reply("asynchronous-reply", { name: "SEE-PAINT", value: logs[i] });
 						break;
 					case "drawTextBlob":
+						// SOMETIMES THIS IS FAULTY.
 						x = logs[i].params.x;
 						y = logs[i].params.y;
 
@@ -308,5 +310,107 @@ async function pageLoading(url, event) {
 		}
 
 		console.log("Valid paint areas computed.");
+
+		// CALCULATE ACTUAL PAGE CONTENTS.
+		// ALL INDEXS REFER TO VALID-PAINT-AREA.
+		pageContent = [];
+		vpa = clonedeep(validPaintArea);
+		for (var i = 0; i < vpa.length; i++) {
+			pageContent.push([]);
+			vpa[i].forEach(d => {
+				d.paint_time = i;
+				d.overlap = [];
+				pageContent[i].push(d);
+			});
+			updateAreaRelationship(pageContent[i]);
+			if (i > 0) {
+				updatePaintTime(pageContent[i], pageContent[i - 1]);
+			}
+		}
+
+		console.log("Actual page content computed.");
+	}
+
+	// CHECK IF RECTANGLE OVERLAP EXISTS.
+	function updateAreaRelationship(regions) {
+		totalAcreage = 0;
+		totalOverlapAcreage = 0;
+		for (var i = regions.length - 1; i >= 0; i--) {
+			rect1 = regions[i];
+			totalAcreage += getAcreage(rect1);
+			if (rect1.type === "text") continue;
+			for (var j = 0; j < i && j >= 0; j--) {
+				rect2 = regions[j];
+				if (rect1.right < rect2.left || rect1.left > rect2.right ||
+					rect1.bottom < rect2.top || rect1.top > rect2.bottom)
+					continue;
+				else {
+					rect1.overlap.push(j);
+					// console.log("In paint overlap:", getOverlapAcreage(rect1, rect2));
+					totalOverlapAcreage += getOverlapAcreage(rect1, rect2);
+				}
+			}
+		}
+		console.log("Paint area", totalAcreage, ", with overlap", totalOverlapAcreage, ", percentage:", (totalOverlapAcreage / totalAcreage).toFixed(3));
+	}
+
+	function getAcreage(rect) {
+		return (rect.right - rect.left) * (rect.bottom - rect.top);
+	}
+
+	// COMPUTE THE ACREAGE OF THE OVERLAP AREA OF TWO RECTANGLES.
+	function getOverlapAcreage(rect1, rect2) {
+		x_overlap = Math.max(0, Math.min(rect1.right, rect2.right) - Math.max(rect1.left, rect2.left));
+		y_overlap = Math.max(0, Math.min(rect1.bottom, rect2.bottom) - Math.max(rect1.top, rect2.top));
+		overlapArea = x_overlap * y_overlap;
+		return overlapArea;
+	}
+
+	// GET INDEXS OF REGIONS THAT ARE FULLY OVERLAPPED BY OTHERS.
+	function getFullyOverlappedRegions(regions) {
+		invalidRegionIndex = [];
+		for (var i = regions.length - 1; i >= 0; i--) {
+			if (invalidRegionIndex.indexOf(i) !== -1) continue;
+			rect1 = regions[i];
+			regions[i].overlap.forEach(d => {
+				rect2 = regions[d];
+				if (rect1.top <= rect2.top && rect1.bottom >= rect2.bottom &&
+					rect1.left <= rect2.left && rect1.right >= rect2.right) {
+					invalidRegionIndex.push(d);
+				}
+			});
+		}
+		return invalidRegionIndex;
+	}
+
+	// ADD AREAS FROM LAST PAINT THAT ARE NOT FULLY OVERLAPPED BY THIS PAINT.
+	function updatePaintTime(regions, former_regions) {
+		currentInvalidRegions = getFullyOverlappedRegions(regions);
+		previousInvalidRegions = getFullyOverlappedRegions(former_regions);
+
+		crossPaintOverlapAcreage = 0;
+		for (var i = regions.length - 1; i >= 0; i--) {
+			if (currentInvalidRegions.indexOf(i) !== -1) continue;
+			if (regions[i].type === "text") continue;
+			rect1 = regions[i];
+
+			for (var j = former_regions.length - 1; j >= 0; j--) {
+				if (previousInvalidRegions.indexOf(j) !== -1) continue;
+				rect2 = former_regions[j];
+				if (rect1.top <= rect2.top && rect1.bottom >= rect2.bottom &&
+					rect1.left <= rect2.left && rect1.right >= rect2.right) {
+					previousInvalidRegions.push(j);
+					// console.log("Cross paint overlap:", (rect2.right - rect2.left) * (rect2.bottom - rect2.top));
+					crossPaintOverlapAcreage += (rect2.right - rect2.left) * (rect2.bottom - rect2.top);
+				}
+			}
+		}
+
+		console.log("Cross paint overlap acreage", crossPaintOverlapAcreage);
+		for (var i = 0; i < former_regions.length; i++) {
+			if (previousInvalidRegions.indexOf(i) === -1) {
+				regions.push(former_regions[i]);
+			}
+		}
 	}
 }

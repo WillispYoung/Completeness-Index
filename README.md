@@ -47,6 +47,19 @@ With each paint event triggered, we can capture a sequence of paint commands. Ea
     4. drawRRect
     5. drawCircle and etc.
 
+#### In-Paint Overlap VS. Cross-Paint Overlap
+
+Take https://www.baidu.com as an example, loading this page triggered paint events as follows once:
+
+| Index | Paint Area | In-Paint Overlap | Cross-Paint Overlap |
+| --- | --- | --- | --- |
+| 0 | 1021229 | 40191 (3.9%) | - |
+| 1 | 1056112 | 75074 (7.1%) | 1021229 (96.7%) |
+| 2 | 1067824 | 86786 (8.1%) | 1056112 (98.9%) |
+| 3 | 1067824 | 86786 (8.1%) | 1067824 (100%) |
+| 4 | 1067824 | 86786 (8.1%) | 1067824 (100%) |
+| 5 | 1068112 | 87074 (8.2%) | 1067824 (99.9%) |
+
 ### Highlights
 
 * Introducing Browser's Role
