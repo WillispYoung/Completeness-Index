@@ -1,0 +1,42 @@
+\documentclass{article}
+\title{Research on Web Metrics}
+\author{Willisp Young}
+\usepackage{xcolor}
+\usepackage[T1]{fontenc}
+\usepackage{mathptmx}
+\begin{document}
+
+\centerline{\textbf{Research on Web Metrics}} 
+
+Web metric, usually in the form of numeric value, is used to depict web page performance under certain standards such as load time, smoothness, response time and etc. Generally speaking, different metrics measure different performances or attributes. Factors that influence web page performance mainly include web page implementation, browser implementation, network status and machine status (or configuration). Here we treat network status and machine status as subordinate factors, with web page implementation and browser implementation the primary ones. After all, from developers' perspective, web page performance is \textcolor{blue}{how well the browser exhibits the page}, while network status and machine status are environmental variables that we cannot change. \\
+
+Now we take \textbf{page implementation} and \textbf{browser implementation} as the primary factors to investigate, we need to choose the metrics to measure web page performance. \emph{Loading efficiency} is a common metric which measures how fast or efficient the browser loads the page. With \textbf{fast} we mean that the time from \textcolor{magenta}{``navigation start''} to \textcolor{magenta}{``load finish''} is short: yet we need to first define the state at which a page finishes ``loading''; secondly, time length, as an absolute value, is highly dependent on environmental variables, thus might be biased and demanding. With \textbf{efficient} we mean that \textcolor{blue}{the browser doesn't waste time and resource} during page loading. It's reasonable to suppose that network and machine status don't contribute to such waste, but inappropriate page and browser implementation do. \emph{Smoothness} measures the quality of web page animation, usually in the form of frame per second (FPS). However, it's hard to acquire such information outside a browser, and this metric is highly dependent upon machine status and configuration. \emph{Response time} measures how fast page element reacts to user interaction. This metric is intimately related to user experience, yet similar to smoothness, it's hard to acquire and dependent upon environmental variables. \\
+
+Thus we choose \textbf{loading efficiency} as the metric to study web page performance. Surely users expect web pages to load as fast as possible, but for pages with heavy workloads (numerous resources, numerous event listeners, dense calculation and etc.), one cannot expect them to load fast, yet one can expect them to load efficiently. As aforementioned, the browser should waste no time and resource during page loading, but we need first understand (or define) what \textbf{is} and what \textbf{causes} waste. \\
+
+Consider when a user inputs a URL in the browser, the browser first fetches the main document, then parses the document and fetches related resource files (this is a single-threaded workload). Meanwhile, the browser uploads page composition to the machine's rendering process, leading to visual update. During page loading, multiple paint events are triggered. With each paint event, we can acquire a sequence of (\texttt{Skia}) paint commands, which include methods like \texttt{"drawRect"}, \texttt{"drawRRect"}, \texttt{"drawImageRect"} and \texttt{"drawTextBlob"}. Some characteristics about these paint events are:
+
+\begin{itemize}
+	\item Each contentful paint command brings a regional update. Later paint will nullify part of  former paint, if latter region overlaps former one. However, a text paint is not considered to overlap former paints, as text region is sparse.
+
+	\item Paint commands can be filling a region (or text) or stroking the border of a region. Stroking can be treat as filling four long rectangles.
+\end{itemize}
+
+\textcolor{blue}{Region overlap causes time and resource waste}, as overlapped regions are painted in vain. Once a paint event is triggered, the viewport is rendered anew, completely or partially. \textcolor{magenta}{Paint manners differ among websites}, yet we need to discern the reasons of such difference. For example, \textcolor{cyan}{https://www.baidu.com} and \textcolor{cyan}{https://www.qq.com} would first paint the whole viewport, then paint each visible element; while \textcolor{cyan}{https://www.163.com} would only update part of the viewport (along with a subset of visible elements). In both cases, the viewport consists of a list of regions that might overlap each other. \\
+
+There are two types of region overlap:
+\begin{itemize}
+	\item In-paint overlap: regions updated by a paint event might overlap each other. This measures how well a web page is structured, as the CSS box model highly prevents region overlap to happen, unless web page developer declares \texttt{fixed} or \texttt{absolute} position.
+
+	\item Cross-paint overlap: regions updated by a paint event might overlap regions updated by another paint. Such overlap can be seen as painting a region repeatedly. This measures how a browser updates and renders a web page: too many overlapping regions would mean low updating effectiveness. 
+\end{itemize}
+
+Along with cross-paint overlap, we can define cross-paint duplication, which measures how many areas are identical after a paint event is triggered. Greater duplication means lower efficiency. \\
+
+Define \textbf{Paint Persistency} at time $t$: 
+
+$$\textrm{PP(t)} = \frac{\sum _{r \in page} \textrm{Area(r) $\times$ (t-r.t)}}{\textrm{Area(viewport)}}.$$
+
+For each region in the viewport, which we make sure that it does not overlap or be overlapped by another region, we sum up its area multiplying the time that it \emph{has existed} ($t-r.t$), then divide the summation by the area of the viewport. Based on the belief that longer an update to the viewport exists, more effective this update is, thus paint persistency measures how effective updates to the viewport (equals to paint events) is. Eliminating region overlap takes aforementioned region overlaps into consideration, thus this metric conforms with effectiveness characterization. This can also be treated as to measure update efficiency, as earlier a region is finalized, more efficient update to this region is.
+
+\end{document}

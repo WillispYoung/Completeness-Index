@@ -2,11 +2,11 @@
 <html>
 
 <head>
-	<meta charset="UTF-8">
-	<title>Web Metric</title>
-	<meta http-equiv="Content-Security-Policy" content="script-src 'self' 'unsafe-inline';" />
-	<style>
-		select {
+    <meta charset="UTF-8">
+    <title>Web Metric</title>
+    <meta http-equiv="Content-Security-Policy" content="script-src 'self' 'unsafe-inline';" />
+    <style>
+        select {
 			height: 22px;
 			margin-left: 50px;
 		}
@@ -19,145 +19,48 @@
 		#content {
 			margin-top: 10px;
 		}
+
+		#notice {
+			position: absolute; 
+			right: 10px; 
+			top: 10px; 
+			font-size: 12px; 
+			border: 1px cyan solid; 
+			display: inline-block;
+		}
+
+		#log {
+			position: absolute; 
+			right: 10px; 
+			top: 50px; 
+			color: magenta; 
+			font-size: 12px; 
+			border: 1px cyan solid;
+		}
+
+		#error {
+			position: absolute; 
+			left: 10px; 
+			bottom: 10px; 
+			color: crimson; 
+			font-size: 12px; 
+			border: 1px cyan solid;
+		}
 	</style>
 </head>
 
 <body>
-	<div id="metadata">
-		<input type="text" id="url">
-		<input type="button" value="GOTO" onclick="passURL()">
-	</div>
-	<div id="content">
-		<canvas id="paint"></canvas>
-	</div>
-	<div id="error" style="position: absolute; left: 10px; bottom: 10px; color: crimson; font-size: 12px;"></div>
-	<script>
-		const { ipcRenderer } = require("electron");
-		const colors = { "rect": "#FF0000", "rrect": "#00FF00", "image": "#0000FF", "text": "#00AAFF" };
-
-		canvas = document.getElementById("paint");
-		context = canvas.getContext("2d");
-
-		ipcRenderer.on("asynchronous-reply", (event, arg) => {
-			switch (arg.name) {
-				case "PASS-URL":
-					if (arg.type && arg.type === "error") {
-						document.getElementById("error").innerHTML = arg.value;
-					}
-					break;
-				case "PAINT-REGION":
-					canvas.width = arg.value.width + '';
-					canvas.height = arg.value.height + '';
-					canvas.style = "border: darkcyan 1px dashed; padding: 10px";
-					break;
-				case "PAINT-COUNT":
-					if ((selectNode = document.getElementById("paint_index"))) {
-						while (selectNode.length) {
-							selectNode.remove(0);
-						}
-						if (arg.value) {
-							for (var i = 0; i < arg.value; i++) {
-								var option = document.createElement('option');
-								option.text = i + 1;
-								option.value = i + 1;
-								selectNode.add(option);
-							}
-						}
-					}
-					else if (arg.value) {
-						var metadata = document.getElementById("metadata");
-						var selectNode = document.createElement("select");
-						selectNode.id = "paint_index";
-						for (var i = 0; i < arg.value; i++) {
-							var option = document.createElement('option');
-							option.text = i + 1;
-							option.value = i + 1;
-							selectNode.add(option);
-						}
-						metadata.appendChild(selectNode);
-
-						var inputNode = document.createElement("input");
-						inputNode.type = "button";
-						inputNode.id = "see_paint";
-						inputNode.value = "SEE PAINT";
-						inputNode.onclick = seePaint;
-						metadata.appendChild(inputNode);
-
-						var inputNode_ = document.createElement("input");
-						inputNode_.type = "button";
-						inputNode_.id = "see_paint_region";
-						inputNode_.value = "SEE PAINT REGION";
-						inputNode_.onclick = seePaintRegion;
-						metadata.appendChild(inputNode_);
-					}
-					break;
-				case "SEE-PAINT":
-					region = arg.value;
-					switch (region.type) {
-						case "rect":
-						case "rrect":
-							if (region.style === "fill") {
-								fillRect(region.rect, region.color);
-							}
-							else if (region.style === "stroke") {
-								strokeRect(region.rect, region.color, region.lineWidth);
-							}
-							break;
-						case "image":
-							fillRect(region.rect, region.color);
-							break;
-						case "text":
-							context.fillStyle = region.color;
-							context.fillText(region.text, region.point.x, region.point.y);
-							break;
-						default:
-							break;
-					}
-					break;
-				case "SEE-PAINT-REGION":
-					rect = arg.value.rect;
-					context.lineWidth = 1;
-					context.strokeStyle = colors[arg.value.type];
-					context.strokeRect(rect.left, rect.top, rect.right - rect.left, rect.bottom - rect.top);
-					break;
-				case "TEST":
-					console.log(arg.value);
-					break;
-				default:
-					break;
-			}
-		});
-
-		function fillRect(rect, color) {
-			context.fillStyle = color;
-			context.fillRect(rect.left, rect.top, rect.right - rect.left, rect.bottom - rect.top);
-		}
-
-		function strokeRect(rect, color, lineWidth) {
-			context.strokeStyle = color;
-			context.lineWidth = region.lineWidth;
-			context.strokeRect(rect.left, rect.top, rect.right - rect.left, rect.bottom - rect.top);
-		}
-
-		function passURL() {
-			url = document.getElementById('url').value;
-			ipcRenderer.send('asynchronous-message', { name: "PASS-URL", url: url });
-		}
-
-		function seePaint() {
-			document.getElementById("error").innerHTML = "";
-			context.clearRect(0, 0, canvas.width, canvas.height);
-			paintIndex = parseInt(document.getElementById("paint_index").value);
-			ipcRenderer.send('asynchronous-message', { name: "SEE-PAINT", index: paintIndex });
-		}
-
-		function seePaintRegion() {
-			document.getElementById("error").innerHTML = "";
-			context.clearRect(0, 0, canvas.width, canvas.height);
-			paintIndex = parseInt(document.getElementById("paint_index").value);
-			ipcRenderer.send('asynchronous-message', { name: "SEE-PAINT-REGION", index: paintIndex });
-		}
-	</script>
+    <div id="metadata">
+        <input type="text" id="url">
+        <input type="button" value="GOTO" onclick="passURL()">
+    </div>
+    <div>
+        <canvas id="paint"></canvas>
+    </div>
+    <div id="notice"></div>
+    <div id="log"></div>
+    <div id="error"></div>
+    <script type="text/javascript" src="res/events.js"></script>
 </body>
 
 </html>

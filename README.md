@@ -63,11 +63,17 @@ Take https://www.baidu.com as an example, once loading this page triggered paint
 | 4 | 1067824 | 86786 (8.1%) | 1067824 (100%) | - |
 | 5 | 1068112 | 87074 (8.2%) | 1067824 (99.9%) | - |
 
-**In-Paint Overlap**: measures how well a page is structured and implemented. Overlap requires browser to invalidate layers and declare new composite layer to normalize rendering process.
+    In-Paint Overlap: measures how well a page is structured and implemented. Overlap requires browser to invalidate layers and declare new composite layer to normalize rendering process.
 
-**Cross-Paint Overlap**: measures how much area is changed with one paint. Better combine *Content Repetition*.
+    Cross-Paint Overlap: measures how much area is changed with one paint. Better combine *Content Repetition*.
 
-**Content Repetition**: measures how much area is *meaninglessly* changed with one paint. 
+    Content Repetition: measures how much area is *meaninglessly* changed with one paint. 
+
+**Paint Manner**:
+
+https://www.baidu.com, https://www.qq.com: in each paint event, (re)paint the whole page first, then paint all visible elements.
+
+https://www.163.com: in most paint events, only update part of the page (and subset of all elements). 
 
 ### Highlights
 

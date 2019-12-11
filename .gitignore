@@ -62,6 +62,4 @@ typings/
 
 # Chrome trace files
 src/output/*.json
-
-# VS Code Config
-.vscode/
+doc/*.pdf
