@@ -17,10 +17,8 @@ context = canvas.getContext("2d");
 
 ipcRenderer.on("asynchronous-reply", (event, arg) => {
     switch (arg.name) {
-        case "PASS-URL":
-            if (arg.type && arg.type === "error") {
-                document.getElementById("error").innerHTML = arg.value;
-            }
+        case "ERROR":
+            document.getElementById("error").innerHTML = arg.value;
             break;
         case "LOG":
             original_value = document.getElementById('log').innerText;
@@ -47,6 +45,7 @@ ipcRenderer.on("asynchronous-reply", (event, arg) => {
                 }
             } else if (arg.value) {
                 var metadata = document.getElementById("metadata");
+                
                 var selectNode = document.createElement("select");
                 selectNode.id = "paint_index";
                 for (var i = 0; i < arg.value; i++) {
@@ -64,7 +63,7 @@ ipcRenderer.on("asynchronous-reply", (event, arg) => {
                 btn1.onclick = seePaint;
                 metadata.appendChild(btn1);
 
-                btn2 = document.createElement("input");
+                var btn2 = document.createElement("input");
                 btn2.type = "button";
                 btn2.id = "see_paint_region";
                 btn2.value = "SEE PAINT REGION";
@@ -104,9 +103,6 @@ ipcRenderer.on("asynchronous-reply", (event, arg) => {
             }
             context.strokeStyle = colors[arg.value.type];
             context.strokeRect(rect.left, rect.top, rect.right - rect.left, rect.bottom - rect.top);
-            break;
-        case "TEST":
-            console.log(arg.value);
             break;
         default:
             break;
