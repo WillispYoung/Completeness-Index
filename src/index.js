@@ -5,7 +5,7 @@ const util = require("./util");
 const pageLoading = require("./loading");
 
 const windowSize = { width: 800, height: 600 };
-const viewportSize = { width: 1000, height: 600 };
+const viewportSize = { width: 1000, height: 700 };
 
 let targetLink, loadData, paintRegions, pageComposition;
 

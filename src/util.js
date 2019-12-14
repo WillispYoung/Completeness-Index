@@ -143,4 +143,3 @@ function segmentRectangle(upper, lower) {
 }
 
 module.exports = { getPaintRegions };
-

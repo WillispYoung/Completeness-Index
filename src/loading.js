@@ -77,6 +77,7 @@ function pageLoading(viewport, url, event, reminder) {
 
         page.on("load", async () => {
             page_loaded = true;
+            timePoints.pageLoaded = Date.now();
             event.reply("asynchronous-reply", { name: "LOG", value: "Page loaded." });
 
             if (page_loaded && ongoing_paint === 0 && ongoing_dom === 0) {
