@@ -5,11 +5,13 @@
 \geometry{top=4cm, bottom=3cm}
 \begin{document}
 
-\centerline{\large{Research on Redundant Paint}}
+\centerline{\large{Research on Redundant Rendering}}
 
-\paragraph{Definition} As observed in the measurement of page load efficiency, Chrome would repeatedly paint similar (even identical) contents to the viewport, mainly caused by the rendering of web page animation. Redundant paint, also called redundant rendering, depicts the phenomenon when a browser updates a web page, it renders contents that are almost identical to those that was previously rendered on the viewport. As most of the ``new paint'' is similar to the ``previous paint'', such update mechanism surely leads to energy waste; yet as rendering techniques nowadays are highly advanced, redundant paint may not cause great time waste. 
+\paragraph{Definition} As observed in the measurement of page load efficiency, Chrome would repeatedly paint similar (even identical) contents to the viewport, mainly caused by the rendering of web page animation. Redundant paint, also called redundant rendering, depicts the phenomenon when a browser updates a web page, it renders contents that are almost identical to those that were previously rendered on the viewport. As most of the ``new paint'' is similar to the ``previous paint'', such update mechanism surely leads to energy waste; yet as rendering techniques nowadays are highly advanced, redundant paint may not cause great time waste. 
 
 As we care more about energy waste, we focus the scenario on the usage of mobile devices (such as smartphones, tablets, Chrome books and etc.), as energy consumption on these devices are more critical.
+
+\paragraph{Phenomenon} Here we'd like to conduct experiments to measure \emph{how frequent} and \emph{at what proportion} redundant rendering happens for web pages on mobile devices. Specifically, we would further discover how web pages implemented using popular front-end frameworks perform with regard to redundant rendering.
 
 \paragraph{Causes}
 
